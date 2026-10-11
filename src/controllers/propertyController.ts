@@ -1,4 +1,6 @@
-import type { Context, Next } from "hono";
+import type { Context } from "hono";
+import { NotFoundApiError } from "../helpers/errors";
+import { ok } from "../helpers/responses";
 
 const propertyCollectionMock = [
   { id: "1", name: "Varna Briz" },
@@ -12,39 +14,38 @@ const matchEntry = (c: Context) => {
 };
 
 export const getPropertyCollection = (c: Context) =>
-  c.json({
-    data: propertyCollectionMock,
-  });
+  ok(c, propertyCollectionMock);
 
-export const createPropertyEntry = (c: Context) =>
-  c.json({ data: propertyCollectionMock[0] }, 201);
-
-export const getPropertyEntry = (c: Context, next: Next) => {
-  const match = matchEntry(c);
-
-  if (match) {
-    return c.json({ data: match });
-  }
-
-  return next();
+export const createPropertyEntry = (c: Context) => {
+  return ok({ c, status: 201 }, propertyCollectionMock[0]!);
 };
 
-export const updatePropertyEntry = (c: Context, next: Next) => {
+export const getPropertyEntry = (c: Context) => {
   const match = matchEntry(c);
 
-  if (match) {
-    return c.json({ data: match });
+  if (!match) {
+    throw new NotFoundApiError("property", c.req.param());
   }
 
-  return next();
+  return ok(c, match);
 };
 
-export const deletePropertyEntry = (c: Context, next: Next) => {
+export const updatePropertyEntry = (c: Context) => {
   const match = matchEntry(c);
 
-  if (match) {
-    return c.body(null, 204);
+  if (!match) {
+    throw new NotFoundApiError("property", c.req.param());
   }
 
-  return next();
+  return ok(c, match);
+};
+
+export const deletePropertyEntry = (c: Context) => {
+  const match = matchEntry(c);
+
+  if (!match) {
+    throw new NotFoundApiError("property", c.req.param());
+  }
+
+  return c.body(null, 204);
 };
