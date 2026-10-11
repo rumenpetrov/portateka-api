@@ -1,0 +1,12 @@
+{
+  "name": "portateka-api-worker",
+  "compatibility_date": "2026-10-06",
+  "main": "src/index.ts",
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "portateka-api.rpetrov.dev",
+      "custom_domain": true,
+    },
+  ],
+}

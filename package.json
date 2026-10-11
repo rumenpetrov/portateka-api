@@ -1,0 +1,25 @@
+{
+  "name": "portateka-api",
+  "version": "1.0.0",
+  "homepage": "https://github.com/rumenpetrov/portateka-api#readme",
+  "bugs": {
+    "url": "https://github.com/rumenpetrov/portateka-api/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rumenpetrov/portateka-api.git"
+  },
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy --minify",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings"
+  },
+  "dependencies": {
+    "hono": "^4.13.13"
+  },
+  "devDependencies": {
+    "wrangler": "^4.110.0"
+  }
+}
