@@ -1,9 +1,13 @@
-import { Hono } from 'hono'
+import { Hono } from "hono";
 
-const app = new Hono()
+const app = new Hono();
 
-app.get('/', (c) => {
-  return c.text('Hello Hono!')
-})
+app.get("/api/health", (c) => {
+  return c.json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    service: "Portateka API",
+  });
+});
 
-export default app
+export default app;
