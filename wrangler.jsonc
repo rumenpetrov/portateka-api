@@ -1,6 +1,6 @@
 {
   "name": "portateka-api-worker",
-  "compatibility_date": "2026-10-06",
+  "compatibility_date": "2026-10-11",
   "main": "src/index.ts",
   "workers_dev": false,
   "routes": [
@@ -9,4 +9,5 @@
       "custom_domain": true,
     },
   ],
+  "vars": {},
 }
