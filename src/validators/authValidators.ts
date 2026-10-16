@@ -10,12 +10,17 @@ export const registerSchema = z.object({
     .toLowerCase()
     .max(255, "too_long")
     .pipe(z.email("invalid_email")),
-  username: z
+  firstName: z
     .string({ error: "required" })
     .trim()
-    .min(3, "username_too_short")
-    .max(50, "username_too_long")
-    .regex(/^[A-Za-z0-9_-]+$/, "username_invalid_chars"),
+    .min(1, "required")
+    .max(50, "too_long"),
+  lastName: z
+    .string({ error: "invalid_type" })
+    .trim()
+    .min(1, "required")
+    .max(50, "too_long")
+    .optional(),
   password: z
     .string({ error: "required" })
     .min(8, "password_too_short")

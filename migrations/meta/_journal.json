@@ -8,6 +8,13 @@
       "when": 1792086697811,
       "tag": "0000_eager_bruce_banner",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792175699778,
+      "tag": "0001_chemical_spiral",
+      "breakpoints": true
     }
   ]
 }

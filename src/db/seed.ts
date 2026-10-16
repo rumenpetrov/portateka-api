@@ -19,24 +19,21 @@ async function seed() {
     await db.insert(users).values([
       {
         email: "john@example.com",
-        username: "johndoe",
+        firstName: "John",
+        lastName: "Doe",
         password,
       },
       {
         email: "jane@example.com",
-        username: "janedoe",
+        firstName: "Jane",
         password,
       },
     ]);
 
     console.log("✅ Database seeded successfully!");
     console.log("\n🔑 Demo Login Credentials:");
-    console.log(
-      "  Email: john@example.com | Username: johndoe | Password: Demo123!",
-    );
-    console.log(
-      "  Email: jane@example.com | Username: janedoe | Password: Demo123!",
-    );
+    console.log("  Email: john@example.com | Name: John Doe | Password: Demo123!");
+    console.log("  Email: jane@example.com | Name: Jane | Password: Demo123!");
   } catch (err) {
     console.error("❌ Seed failed:", err);
     process.exit(1);

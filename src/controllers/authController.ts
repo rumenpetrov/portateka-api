@@ -46,17 +46,23 @@ const getPgError = (err: unknown) => {
 };
 
 export const register = async (c: RegisterContext) => {
-  const { email, username, password } = c.req.valid("json");
+  const { email, firstName, lastName, password } = c.req.valid("json");
   const db = getDb(c.env.DATABASE_URL);
 
   try {
     const [user] = await db
       .insert(users)
-      .values({ email, username, password: await hashPassword(password) })
+      .values({
+        email,
+        firstName,
+        lastName,
+        password: await hashPassword(password),
+      })
       .returning({
         id: users.id,
         email: users.email,
-        username: users.username,
+        firstName: users.firstName,
+        lastName: users.lastName,
         createdAt: users.createdAt,
       });
 
@@ -65,11 +71,7 @@ export const register = async (c: RegisterContext) => {
     const pgError = getPgError(err);
 
     if (pgError) {
-      const field = pgError.constraint?.includes("email")
-        ? "email"
-        : "username";
-
-      throw new DuplicateApiError("user", { [field]: "already_exists" });
+      throw new DuplicateApiError("user", { email: "already_exists" });
     }
 
     throw err;
@@ -84,7 +86,8 @@ export const login = async (c: LoginContext) => {
     .select({
       id: users.id,
       email: users.email,
-      username: users.username,
+      firstName: users.firstName,
+      lastName: users.lastName,
       password: users.password,
     })
     .from(users)
@@ -100,7 +103,12 @@ export const login = async (c: LoginContext) => {
   }
 
   const token = await generateToken(
-    { sub: user.id, email: user.email, username: user.username },
+    {
+      sub: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+    },
     c.env.JWT_SECRET,
   );
 
@@ -109,7 +117,8 @@ export const login = async (c: LoginContext) => {
     user: {
       id: user.id,
       email: user.email,
-      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
     },
   });
 };
@@ -122,7 +131,8 @@ export const me = async (c: AuthContext) => {
     .select({
       id: users.id,
       email: users.email,
-      username: users.username,
+      firstName: users.firstName,
+      lastName: users.lastName,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
     })
