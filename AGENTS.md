@@ -5,7 +5,7 @@
 - **Design philosophy:** Prefer simple, explicit, readable code over clever abstractions (KISS, YAGNI). Reuse existing project helpers (`ok`, `bad`, `ApiError`, `validateJson`) before introducing new ones, and extract new shared utilities only when a pattern genuinely repeats.
 - **Step-by-step execution:** Break work into small, independently verifiable steps:
   1. **Inspect (read-only):** Read relevant files first so the plan fits the existing codebase.
-  2. **Plan & teach:** Present a short plan for the current step, explain the key concepts/trade-offs, highlight any decisions for the user, and **stop for explicit confirmation before creating or modifying any files or installing packages**.
+  2. **Plan & teach:** Present a short plan for the current step, explain the key concepts/trade-offs, highlight any decisions for the user, and **stop for explicit confirmation before creating or modifying any files, installing packages, or resetting/destroying local database state (`db:reset`, `db:seed`)**.
   3. **Execute & verify:** After confirmation, apply the changes and verify them (`npm run typecheck` and a quick runtime/endpoint check) before moving to the next step.
 
 ## Runtime & Stack
@@ -30,7 +30,8 @@
 ## Database & Environment Workflow
 - **Local secrets:** Keep local secrets in `.env` (copied from `.env.example`, loaded by both Wrangler and `drizzle.config.ts` via `dotenv/config`). Keep `.env` as the sole local env file (creating `.dev.vars` would cause Wrangler to ignore `.env`).
 - **Schema conventions:** Always define timestamps with `timestamp("...", { withTimezone: true })`.
-- **Migrations:**
+- **Migrations & Seeding:**
   - Rapid prototyping: `npm run db:push` syncs `src/db/schema.ts` directly to the dev database without generating migration files.
-  - Committing schema changes: `npm run db:generate` writes SQL migrations to `migrations/`, and `npm run db:migrate` applies them.
+  - Committing schema changes: `npm run db:generate` writes SQL migrations to `migrations/`, followed by `npm run db:reset` $\rightarrow$ `npm run db:migrate` $\rightarrow$ `npm run db:seed` to verify the full migration chain locally.
+  - **Destructive DB confirmation:** Always ask for explicit user confirmation before running `npm run db:reset`, `npm run db:seed`, or any command that drops tables or deletes data.
 - **CI/CD & Production secrets:** `.github/workflows/deploy.yml` is the single source of truth for production secrets. On push to `main`, GitHub Actions runs `npm run db:migrate` and syncs secrets (`DATABASE_URL`, `JWT_SECRET`) to Cloudflare Workers. When adding a new secret binding, add the key to `.env.example`, set its value in `.env`, run `npm run cf-typegen`, and add it to the `secrets` list in `.github/workflows/deploy.yml`.
