@@ -11,7 +11,7 @@ export const ERROR_STATUS_MAP = {
 
 export type ErrorCode = keyof typeof ERROR_STATUS_MAP;
 
-export const RESOURCES = ["property", "route"] as const;
+export const RESOURCES = ["property", "route", "user"] as const;
 
 export type Resource = (typeof RESOURCES)[number];
 

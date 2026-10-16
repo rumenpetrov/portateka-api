@@ -1,11 +1,14 @@
 import { Hono } from "hono";
 import { SYSTEM_CONFIG } from "./config";
 import { logger } from "hono/logger";
+import { HTTPException } from "hono/http-exception";
 import propertyRoutes from "./routes/propertyRoutes";
+import authRoutes from "./routes/authRoutes";
 import { ApiError } from "./helpers/errors";
 import { bad } from "./helpers/responses";
+import type { AppEnv } from "./types/env";
 
-const app = new Hono<{ Bindings: CloudflareBindings }>();
+const app = new Hono<AppEnv>();
 
 app.use(logger());
 
@@ -17,6 +20,8 @@ app.get("/health", (c) => {
   });
 });
 
+app.route("/api/auth", authRoutes);
+
 app.route("/api/properties", propertyRoutes);
 
 app.notFound((c) => bad(c, "NOT_FOUND", "route"));
@@ -26,6 +31,11 @@ app.onError((err, c) => {
 
   if (err instanceof ApiError) {
     return bad(c, err.code, err.resource, err.params);
+  }
+
+  // Hono throws a 400 HTTPException for malformed JSON bodies.
+  if (err instanceof HTTPException && err.status === 400) {
+    return bad(c, "VALIDATION_ERROR");
   }
 
   return bad(c, "INTERNAL_SERVER_ERROR");

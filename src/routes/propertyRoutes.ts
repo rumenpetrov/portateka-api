@@ -6,8 +6,12 @@ import {
   updatePropertyEntry,
   deletePropertyEntry,
 } from "../controllers/propertyController";
+import { requireAuth } from "../middleware/auth";
+import type { AppEnv } from "../types/env";
 
-const app = new Hono();
+const app = new Hono<AppEnv>();
+
+app.use("*", requireAuth);
 
 app.get("/", getPropertyCollection);
 

@@ -15,13 +15,24 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "hono": "^4.13.13"
+    "@hono/zod-validator": "^0.9.1",
+    "@neondatabase/serverless": "^1.2.0",
+    "drizzle-orm": "^0.45.4",
+    "hono": "^4.13.13",
+    "jose": "^6.2.12",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20261011.1",
+    "@types/node": "^26.6.5",
+    "dotenv": "^18.0.8",
+    "drizzle-kit": "^0.31.11",
     "typescript": "^7.0.2",
     "wrangler": "^4.110.0"
   }
