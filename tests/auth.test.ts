@@ -25,7 +25,7 @@ describe("Authentication Endpoints", () => {
     await cleanupDatabase();
   });
 
-  describe("POST /api/auth/register", () => {
+  describe("POST /api/auth/sign-up/email", () => {
     it("should register a new user with valid data", async () => {
       const userData = {
         email: `Test-${Date.now()}@Example.com`,
@@ -34,7 +34,7 @@ describe("Authentication Endpoints", () => {
         password: "TestPassword123!",
       };
 
-      const response = await jsonRequest("/api/auth/register", userData);
+      const response = await jsonRequest("/api/auth/sign-up/email", userData);
       const body = await response.json();
 
       expect(response.status).toBe(201);
@@ -52,7 +52,7 @@ describe("Authentication Endpoints", () => {
     it("should return 409 for duplicate email", async () => {
       const { user } = await createTestUser();
 
-      const response = await jsonRequest("/api/auth/register", {
+      const response = await jsonRequest("/api/auth/sign-up/email", {
         email: user.email,
         firstName: "Another",
         password: "TestPassword123!",
@@ -70,7 +70,7 @@ describe("Authentication Endpoints", () => {
     });
 
     it("should return 422 for invalid email", async () => {
-      const response = await jsonRequest("/api/auth/register", {
+      const response = await jsonRequest("/api/auth/sign-up/email", {
         email: "invalid-email",
         firstName: "Test",
         password: "TestPassword123!",
@@ -88,7 +88,7 @@ describe("Authentication Endpoints", () => {
     });
 
     it("should return 422 for weak password", async () => {
-      const response = await jsonRequest("/api/auth/register", {
+      const response = await jsonRequest("/api/auth/sign-up/email", {
         email: `test-${Date.now()}@example.com`,
         firstName: "Test",
         password: "short",
@@ -106,11 +106,11 @@ describe("Authentication Endpoints", () => {
     });
   });
 
-  describe("POST /api/auth/login", () => {
+  describe("POST /api/auth/sign-in/email", () => {
     it("should login with valid credentials", async () => {
       const { user, rawPassword } = await createTestUser();
 
-      const response = await jsonRequest("/api/auth/login", {
+      const response = await jsonRequest("/api/auth/sign-in/email", {
         email: user.email,
         password: rawPassword,
       });
@@ -131,7 +131,7 @@ describe("Authentication Endpoints", () => {
     });
 
     it("should return 422 for missing email", async () => {
-      const response = await jsonRequest("/api/auth/login", {
+      const response = await jsonRequest("/api/auth/sign-in/email", {
         password: "TestPassword123!",
       });
       const body = await response.json();
@@ -149,7 +149,7 @@ describe("Authentication Endpoints", () => {
     it("should return 401 for invalid password", async () => {
       const { user } = await createTestUser();
 
-      const response = await jsonRequest("/api/auth/login", {
+      const response = await jsonRequest("/api/auth/sign-in/email", {
         email: user.email,
         password: "WrongPassword123!",
       });
@@ -163,7 +163,7 @@ describe("Authentication Endpoints", () => {
     });
 
     it("should return 401 for non-existent user", async () => {
-      const response = await jsonRequest("/api/auth/login", {
+      const response = await jsonRequest("/api/auth/sign-in/email", {
         email: "nonexistent@example.com",
         password: "TestPassword123!",
       });

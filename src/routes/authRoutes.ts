@@ -1,17 +1,25 @@
 import { Hono } from "hono";
-import { login, me, register } from "../controllers/authController";
+import { me, signInEmail, signUpEmail } from "../controllers/authController";
 import { requireAuth } from "../middleware/auth";
 import {
-  loginSchema,
-  registerSchema,
+  signInEmailSchema,
+  signUpEmailSchema,
   validateJson,
 } from "../validators/authValidators";
 import type { AppEnv } from "../types/env";
 
 const app = new Hono<AppEnv>();
 
-app.post("/register", validateJson(registerSchema, "user"), register);
-app.post("/login", validateJson(loginSchema, "user"), login);
+app.post(
+  "/sign-up/email",
+  validateJson(signUpEmailSchema, "user"),
+  signUpEmail,
+);
+app.post(
+  "/sign-in/email",
+  validateJson(signInEmailSchema, "user"),
+  signInEmail,
+);
 app.get("/me", requireAuth, me);
 
 export default app;

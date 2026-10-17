@@ -79,22 +79,22 @@ Defined in [`src/validators/authValidators.ts`](../src/validators/authValidators
 
 | Field (`params` key) | Machine Code (`params` value) | HTTP Status / `code` | Trigger Rule |
 | :--- | :--- | :---: | :--- |
-| `email` | `required` | `422 VALIDATION_ERROR` | Missing or not a string (`register`, `login`). |
-| `email` | `too_long` | `422 VALIDATION_ERROR` | Exceeds `255` characters (`register`). |
-| `email` | `invalid_email` | `422 VALIDATION_ERROR` | Fails email format validation (`register`, `login`). |
-| `email` | `already_exists` | `409 ALREADY_EXISTS` | Email is already registered (`register`). |
-| `firstName` | `required` | `422 VALIDATION_ERROR` | Missing, not a string, or empty after `.trim()` (`register`). |
-| `firstName` | `too_long` | `422 VALIDATION_ERROR` | Exceeds `50` characters (`register`). |
-| `lastName` | `invalid_type` | `422 VALIDATION_ERROR` | Provided as a non-string value (`register`). |
-| `lastName` | `required` | `422 VALIDATION_ERROR` | Provided as an empty/whitespace-only string (`register`). |
-| `lastName` | `too_long` | `422 VALIDATION_ERROR` | Exceeds `50` characters (`register`). |
-| `password` | `required` | `422 VALIDATION_ERROR` | Missing or empty (`register`, `login`). |
-| `password` | `password_too_short` | `422 VALIDATION_ERROR` | Fewer than `8` characters (`register`). |
-| `password` | `password_too_long` | `422 VALIDATION_ERROR` | Exceeds `128` characters (`register`). |
-| `password` | `password_missing_uppercase` | `422 VALIDATION_ERROR` | Does not contain at least one uppercase letter `[A-Z]` (`register`). |
-| `password` | `password_missing_lowercase` | `422 VALIDATION_ERROR` | Does not contain at least one lowercase letter `[a-z]` (`register`). |
-| `password` | `password_missing_number` | `422 VALIDATION_ERROR` | Does not contain at least one digit `\d` (`register`). |
-| `password` | `password_missing_special` | `422 VALIDATION_ERROR` | Does not contain at least one special character `[^A-Za-z0-9]` (`register`). |
+| `email` | `required` | `422 VALIDATION_ERROR` | Missing or not a string (`sign-up/email`, `sign-in/email`). |
+| `email` | `too_long` | `422 VALIDATION_ERROR` | Exceeds `255` characters (`sign-up/email`). |
+| `email` | `invalid_email` | `422 VALIDATION_ERROR` | Fails email format validation (`sign-up/email`, `sign-in/email`). |
+| `email` | `already_exists` | `409 ALREADY_EXISTS` | Email is already registered (`sign-up/email`). |
+| `firstName` | `required` | `422 VALIDATION_ERROR` | Missing, not a string, or empty after `.trim()` (`sign-up/email`). |
+| `firstName` | `too_long` | `422 VALIDATION_ERROR` | Exceeds `50` characters (`sign-up/email`). |
+| `lastName` | `invalid_type` | `422 VALIDATION_ERROR` | Provided as a non-string value (`sign-up/email`). |
+| `lastName` | `required` | `422 VALIDATION_ERROR` | Provided as an empty/whitespace-only string (`sign-up/email`). |
+| `lastName` | `too_long` | `422 VALIDATION_ERROR` | Exceeds `50` characters (`sign-up/email`). |
+| `password` | `required` | `422 VALIDATION_ERROR` | Missing or empty (`sign-up/email`, `sign-in/email`). |
+| `password` | `password_too_short` | `422 VALIDATION_ERROR` | Fewer than `8` characters (`sign-up/email`). |
+| `password` | `password_too_long` | `422 VALIDATION_ERROR` | Exceeds `128` characters (`sign-up/email`). |
+| `password` | `password_missing_uppercase` | `422 VALIDATION_ERROR` | Does not contain at least one uppercase letter `[A-Z]` (`sign-up/email`). |
+| `password` | `password_missing_lowercase` | `422 VALIDATION_ERROR` | Does not contain at least one lowercase letter `[a-z]` (`sign-up/email`). |
+| `password` | `password_missing_number` | `422 VALIDATION_ERROR` | Does not contain at least one digit `\d` (`sign-up/email`). |
+| `password` | `password_missing_special` | `422 VALIDATION_ERROR` | Does not contain at least one special character `[^A-Za-z0-9]` (`sign-up/email`). |
 
 ---
 

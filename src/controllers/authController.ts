@@ -8,21 +8,21 @@ import { generateToken } from "../utils/jwt";
 import { eq } from "drizzle-orm";
 import type { z } from "zod";
 import type {
-  registerSchema,
-  loginSchema,
+  signUpEmailSchema,
+  signInEmailSchema,
 } from "../validators/authValidators";
 import type { AppEnv } from "../types/env";
 
-type RegisterContext = Context<
+type SignUpEmailContext = Context<
   AppEnv,
   string,
-  { in: { json: unknown }; out: { json: z.output<typeof registerSchema> } }
+  { in: { json: unknown }; out: { json: z.output<typeof signUpEmailSchema> } }
 >;
 
-type LoginContext = Context<
+type SignInEmailContext = Context<
   AppEnv,
   string,
-  { in: { json: unknown }; out: { json: z.output<typeof loginSchema> } }
+  { in: { json: unknown }; out: { json: z.output<typeof signInEmailSchema> } }
 >;
 
 type AuthContext = Context<AppEnv>;
@@ -45,7 +45,7 @@ const getPgError = (err: unknown) => {
   );
 };
 
-export const register = async (c: RegisterContext) => {
+export const signUpEmail = async (c: SignUpEmailContext) => {
   const { email, firstName, lastName, password } = c.req.valid("json");
   const db = getDb(c.env.DATABASE_URL);
 
@@ -78,7 +78,7 @@ export const register = async (c: RegisterContext) => {
   }
 };
 
-export const login = async (c: LoginContext) => {
+export const signInEmail = async (c: SignInEmailContext) => {
   const { email, password } = c.req.valid("json");
   const db = getDb(c.env.DATABASE_URL);
 

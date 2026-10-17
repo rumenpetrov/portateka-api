@@ -2,7 +2,7 @@ import { z } from "zod";
 export { validateJson } from "./validate";
 
 // Messages are short machine codes; the client translates them.
-export const registerSchema = z.object({
+export const signUpEmailSchema = z.object({
   email: z
     .string({ error: "required" })
     .trim()
@@ -30,7 +30,7 @@ export const registerSchema = z.object({
     .regex(/[^A-Za-z0-9]/, "password_missing_special"),
 });
 
-export const loginSchema = z.object({
+export const signInEmailSchema = z.object({
   email: z
     .string({ error: "required" })
     .trim()
