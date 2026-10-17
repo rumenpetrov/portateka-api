@@ -1,6 +1,5 @@
-import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import { ValidationApiError, type Resource } from "../helpers/errors";
+export { validateJson } from "./validate";
 
 // Messages are short machine codes; the client translates them.
 export const registerSchema = z.object({
@@ -40,21 +39,3 @@ export const loginSchema = z.object({
   password: z.string({ error: "required" }).min(1, "required"),
 });
 
-// Validates the JSON body and throws a ValidationApiError whose params
-// map each invalid field to its first error code.
-export const validateJson = <T extends z.ZodType>(
-  schema: T,
-  resource: Resource,
-) =>
-  zValidator("json", schema, (result) => {
-    if (!result.success) {
-      const params: Record<string, string> = {};
-
-      for (const issue of result.error.issues) {
-        const field = String(issue.path[0] ?? "body");
-        params[field] ??= issue.message;
-      }
-
-      throw new ValidationApiError(resource, params);
-    }
-  });

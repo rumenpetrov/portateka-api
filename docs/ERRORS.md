@@ -1,0 +1,115 @@
+# Error Codes & Machine Keys (`portateka-api`)
+
+All error responses are formatted by `bad()` in [`src/helpers/responses.ts`](../src/helpers/responses.ts) and follow the `ErrorResponse` shape:
+
+```json
+{
+  "code": "VALIDATION_ERROR",
+  "resource": "user",
+  "params": {
+    "email": "invalid_email"
+  }
+}
+```
+
+- `code` (required): Top-level `ErrorCode` determining the HTTP status code.
+- `resource` (optional): Domain entity (`Resource`) associated with the error.
+- `params` (optional): `Record<string, string>` containing either route context (for general errors like `NOT_FOUND`) or field-to-machine-code mappings (for form/validation errors).
+
+---
+
+## 1. General Errors (Top-Level API Errors)
+
+### Error Codes (`ErrorCode`)
+
+Defined in `ERROR_STATUS_MAP` ([`src/helpers/errors.ts`](../src/helpers/errors.ts)):
+
+| `code` | HTTP Status | Error Class / Source | Meaning |
+| :--- | :---: | :--- | :--- |
+| `UNAUTHORIZED` | `401` | `ApiError("UNAUTHORIZED", "user")` | Missing, malformed, or expired Bearer token, invalid login credentials, or user no longer exists. |
+| `FORBIDDEN` | `403` | `ApiError("FORBIDDEN", ...)` | Authenticated user lacks permission for the requested action. |
+| `NOT_FOUND` | `404` | `NotFoundApiError` / `app.notFound` | Requested route or resource entry does not exist (or belongs to another user). |
+| `ALREADY_EXISTS` | `409` | `DuplicateApiError` | Uniqueness constraint violation (e.g., registering with an existing email). |
+| `VALIDATION_ERROR` | `422` / `400`* | `ValidationApiError` / `app.onError` | Request body, parameters, or domain invariant failed validation. (*Note: Malformed JSON body returns `code: "VALIDATION_ERROR"` with HTTP `422` via `bad(c, "VALIDATION_ERROR")`.*) |
+| `INTERNAL_SERVER_ERROR` | `500` | `InternalServerApiError` / `app.onError` | Unhandled server or database error. |
+
+### Resources (`Resource`)
+
+Defined in `RESOURCES` ([`src/helpers/errors.ts`](../src/helpers/errors.ts)):
+
+| `resource` | Description |
+| :--- | :--- |
+| `route` | Unknown URL path / endpoint (`app.notFound`). |
+| `user` | Authentication and user account operations (`/api/auth/*`). |
+| `property` | Property operations (`/api/properties/*`). |
+
+### Non-Form General Error Responses
+
+These responses do not map form input fields to validation machine codes:
+
+| Scenario | HTTP Status | `code` | `resource` | `params` |
+| :--- | :---: | :--- | :--- | :--- |
+| Unknown endpoint (`app.notFound`) | `404` | `NOT_FOUND` | `route` | *(omitted)* |
+| Property not found or owned by another user | `404` | `NOT_FOUND` | `property` | `{ "id": "<requested-uuid>" }` |
+| Missing/invalid JWT or bad login credentials | `401` | `UNAUTHORIZED` | `user` | *(omitted)* |
+| Malformed JSON request body | `422` | `VALIDATION_ERROR` | *(omitted)* | *(omitted)* |
+| Unhandled exception | `500` | `INTERNAL_SERVER_ERROR` | *(omitted)* | *(omitted)* |
+
+---
+
+## 2. Form & Field Errors (`params`)
+
+When `code` is `VALIDATION_ERROR` (`422`) or `ALREADY_EXISTS` (`409`), `params` maps each invalid field name (`string`) to a short machine error code (`string`) that the frontend translates into localized field messages.
+
+### Shared Field Machine Codes
+
+| Machine Code | Meaning |
+| :--- | :--- |
+| `required` | Field is missing, `null`, not a string, or empty after trimming. |
+| `invalid_type` | Field value has the wrong JSON type (e.g., number/object instead of string or boolean). |
+| `too_long` | String exceeds the maximum allowed character length for the field. |
+| `invalid_uuid` | Route/field value is not a valid UUID. |
+| `already_exists` | Field value violates a uniqueness constraint. |
+
+---
+
+### `user` Resource Form Errors (`/api/auth/*`)
+
+Defined in [`src/validators/authValidators.ts`](../src/validators/authValidators.ts) and [`src/controllers/authController.ts`](../src/controllers/authController.ts):
+
+| Field (`params` key) | Machine Code (`params` value) | HTTP Status / `code` | Trigger Rule |
+| :--- | :--- | :---: | :--- |
+| `email` | `required` | `422 VALIDATION_ERROR` | Missing or not a string (`register`, `login`). |
+| `email` | `too_long` | `422 VALIDATION_ERROR` | Exceeds `255` characters (`register`). |
+| `email` | `invalid_email` | `422 VALIDATION_ERROR` | Fails email format validation (`register`, `login`). |
+| `email` | `already_exists` | `409 ALREADY_EXISTS` | Email is already registered (`register`). |
+| `firstName` | `required` | `422 VALIDATION_ERROR` | Missing, not a string, or empty after `.trim()` (`register`). |
+| `firstName` | `too_long` | `422 VALIDATION_ERROR` | Exceeds `50` characters (`register`). |
+| `lastName` | `invalid_type` | `422 VALIDATION_ERROR` | Provided as a non-string value (`register`). |
+| `lastName` | `required` | `422 VALIDATION_ERROR` | Provided as an empty/whitespace-only string (`register`). |
+| `lastName` | `too_long` | `422 VALIDATION_ERROR` | Exceeds `50` characters (`register`). |
+| `password` | `required` | `422 VALIDATION_ERROR` | Missing or empty (`register`, `login`). |
+| `password` | `password_too_short` | `422 VALIDATION_ERROR` | Fewer than `8` characters (`register`). |
+| `password` | `password_too_long` | `422 VALIDATION_ERROR` | Exceeds `128` characters (`register`). |
+| `password` | `password_missing_uppercase` | `422 VALIDATION_ERROR` | Does not contain at least one uppercase letter `[A-Z]` (`register`). |
+| `password` | `password_missing_lowercase` | `422 VALIDATION_ERROR` | Does not contain at least one lowercase letter `[a-z]` (`register`). |
+| `password` | `password_missing_number` | `422 VALIDATION_ERROR` | Does not contain at least one digit `\d` (`register`). |
+| `password` | `password_missing_special` | `422 VALIDATION_ERROR` | Does not contain at least one special character `[^A-Za-z0-9]` (`register`). |
+
+---
+
+### `property` Resource Form & Param Errors (`/api/properties/*`)
+
+Defined in [`src/validators/propertyValidators.ts`](../src/validators/propertyValidators.ts) and [`src/controllers/propertyController.ts`](../src/controllers/propertyController.ts):
+
+| Field (`params` key) | Machine Code (`params` value) | HTTP Status / `code` | Trigger Rule |
+| :--- | :--- | :---: | :--- |
+| `id` *(route param)* | `invalid_uuid` | `422 VALIDATION_ERROR` | `:id` URL parameter is not a valid UUID (`GET /:id`, `PATCH /:id`, `DELETE /:id`). |
+| `name` | `required` | `422 VALIDATION_ERROR` | Missing on `POST`, not a string, or empty after `.trim()` (`POST`, `PATCH`). |
+| `name` | `too_long` | `422 VALIDATION_ERROR` | Exceeds `100` characters (`POST`, `PATCH`). |
+| `description` | `invalid_type` | `422 VALIDATION_ERROR` | Provided and is neither a string nor `null` (`POST`, `PATCH`). |
+| `description` | `too_long` | `422 VALIDATION_ERROR` | Exceeds `1000` characters (`POST`, `PATCH`). |
+| `notes` | `invalid_type` | `422 VALIDATION_ERROR` | Provided and is neither a string nor `null` (`POST`, `PATCH`). |
+| `notes` | `too_long` | `422 VALIDATION_ERROR` | Exceeds `2000` characters (`POST`, `PATCH`). |
+| `preferred` | `invalid_type` | `422 VALIDATION_ERROR` | Provided and is not a boolean (`POST`, `PATCH`). |
+| `preferred` | `cannot_unset_only_property` | `422 VALIDATION_ERROR` | Attempting to `PATCH` `preferred: false` when the user has only `1` property in total. |

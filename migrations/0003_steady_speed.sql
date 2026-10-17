@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "properties_user_preferred_idx" ON "properties" USING btree ("user_id") WHERE "properties"."preferred" = true;

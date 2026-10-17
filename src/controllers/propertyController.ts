@@ -1,54 +1,186 @@
 import type { Context } from "hono";
-import { NotFoundApiError } from "../helpers/errors";
+import { and, count, desc, eq, ne } from "drizzle-orm";
+import type { z } from "zod";
+import { NotFoundApiError, ValidationApiError } from "../helpers/errors";
 import { ok } from "../helpers/responses";
+import { getDb } from "../db";
+import { properties } from "../db/schema";
+import type {
+  createPropertySchema,
+  propertyIdParamSchema,
+  updatePropertySchema,
+} from "../validators/propertyValidators";
 import type { AppEnv } from "../types/env";
 
 type PropertyContext = Context<AppEnv>;
 
-const propertyCollectionMock = [
-  { id: "1", name: "Varna Briz" },
-  { id: "2", name: "Sofia Center" },
-];
+type PropertyParamContext = Context<
+  AppEnv,
+  string,
+  {
+    in: { param: z.input<typeof propertyIdParamSchema> };
+    out: { param: z.output<typeof propertyIdParamSchema> };
+  }
+>;
 
-const matchEntry = (c: PropertyContext) => {
-  return propertyCollectionMock.find(
-    (propertyEntry) => propertyEntry.id === c.req.param("id"),
-  );
+type CreatePropertyContext = Context<
+  AppEnv,
+  string,
+  {
+    in: { json: unknown };
+    out: { json: z.output<typeof createPropertySchema> };
+  }
+>;
+
+type UpdatePropertyContext = Context<
+  AppEnv,
+  string,
+  {
+    in: {
+      param: z.input<typeof propertyIdParamSchema>;
+      json: unknown;
+    };
+    out: {
+      param: z.output<typeof propertyIdParamSchema>;
+      json: z.output<typeof updatePropertySchema>;
+    };
+  }
+>;
+
+export const getPropertyCollection = async (c: PropertyContext) => {
+  const { sub: userId } = c.get("user");
+  const db = getDb(c.env.DATABASE_URL);
+
+  const userProperties = await db
+    .select()
+    .from(properties)
+    .where(eq(properties.userId, userId))
+    .orderBy(desc(properties.preferred), desc(properties.createdAt));
+
+  return ok(c, userProperties);
 };
 
-export const getPropertyCollection = (c: PropertyContext) =>
-  ok(c, propertyCollectionMock);
+export const createPropertyEntry = async (c: CreatePropertyContext) => {
+  const { sub: userId } = c.get("user");
+  const { name, description, notes, preferred } = c.req.valid("json");
+  const db = getDb(c.env.DATABASE_URL);
 
-export const createPropertyEntry = (c: PropertyContext) => {
-  return ok({ c, status: 201 }, propertyCollectionMock[0]!);
-};
+  const [countResult] = await db
+    .select({ value: count() })
+    .from(properties)
+    .where(eq(properties.userId, userId));
 
-export const getPropertyEntry = (c: PropertyContext) => {
-  const match = matchEntry(c);
+  const userPropertyCount = countResult?.value ?? 0;
 
-  if (!match) {
-    throw new NotFoundApiError("property", c.req.param());
+  // Business rule: a user's first property is always preferred.
+  const isPreferred = userPropertyCount === 0 ? true : (preferred ?? false);
+
+  if (isPreferred && userPropertyCount > 0) {
+    await db
+      .update(properties)
+      .set({ preferred: false, updatedAt: new Date() })
+      .where(
+        and(eq(properties.userId, userId), eq(properties.preferred, true)),
+      );
   }
 
-  return ok(c, match);
+  const [newProperty] = await db
+    .insert(properties)
+    .values({
+      userId,
+      name,
+      description,
+      notes,
+      preferred: isPreferred,
+    })
+    .returning();
+
+  return ok({ c, status: 201 }, newProperty!);
 };
 
-export const updatePropertyEntry = (c: PropertyContext) => {
-  const match = matchEntry(c);
+export const getPropertyEntry = async (c: PropertyParamContext) => {
+  const { sub: userId } = c.get("user");
+  const { id } = c.req.valid("param");
+  const db = getDb(c.env.DATABASE_URL);
 
-  if (!match) {
-    throw new NotFoundApiError("property", c.req.param());
+  const [property] = await db
+    .select()
+    .from(properties)
+    .where(and(eq(properties.id, id), eq(properties.userId, userId)))
+    .limit(1);
+
+  if (!property) {
+    throw new NotFoundApiError("property", { id });
   }
 
-  return ok(c, match);
+  return ok(c, property);
 };
 
-export const deletePropertyEntry = (c: PropertyContext) => {
-  const match = matchEntry(c);
+export const updatePropertyEntry = async (c: UpdatePropertyContext) => {
+  const { sub: userId } = c.get("user");
+  const { id } = c.req.valid("param");
+  const updates = c.req.valid("json");
+  const db = getDb(c.env.DATABASE_URL);
 
-  if (!match) {
-    throw new NotFoundApiError("property", c.req.param());
+  const [existing] = await db
+    .select()
+    .from(properties)
+    .where(and(eq(properties.id, id), eq(properties.userId, userId)))
+    .limit(1);
+
+  if (!existing) {
+    throw new NotFoundApiError("property", { id });
+  }
+
+  if (updates.preferred === false) {
+    const [countResult] = await db
+      .select({ value: count() })
+      .from(properties)
+      .where(eq(properties.userId, userId));
+
+    if ((countResult?.value ?? 0) <= 1) {
+      throw new ValidationApiError("property", {
+        preferred: "cannot_unset_only_property",
+      });
+    }
+  }
+
+  if (updates.preferred === true && !existing.preferred) {
+    await db
+      .update(properties)
+      .set({ preferred: false, updatedAt: new Date() })
+      .where(
+        and(
+          eq(properties.userId, userId),
+          eq(properties.preferred, true),
+          ne(properties.id, id),
+        ),
+      );
+  }
+
+  const [updatedProperty] = await db
+    .update(properties)
+    .set({ ...updates, updatedAt: new Date() })
+    .where(and(eq(properties.id, id), eq(properties.userId, userId)))
+    .returning();
+
+  return ok(c, updatedProperty!);
+};
+
+export const deletePropertyEntry = async (c: PropertyParamContext) => {
+  const { sub: userId } = c.get("user");
+  const { id } = c.req.valid("param");
+  const db = getDb(c.env.DATABASE_URL);
+
+  const [deletedProperty] = await db
+    .delete(properties)
+    .where(and(eq(properties.id, id), eq(properties.userId, userId)))
+    .returning({ id: properties.id });
+
+  if (!deletedProperty) {
+    throw new NotFoundApiError("property", { id });
   }
 
   return c.body(null, 204);
 };
+

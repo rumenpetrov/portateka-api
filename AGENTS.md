@@ -25,8 +25,9 @@
 - **Success responses:** Return data with `ok(c, data)` or `ok({ c, status: 201 }, data)` from `src/helpers/responses.ts` (produces `{ data, ...extra }`).
 - **Errors:** Throw `ApiError` or its subclasses (`NotFoundApiError`, `ValidationApiError`, `DuplicateApiError`) from `src/helpers/errors.ts`. `app.onError` in `src/index.ts` catches them and formats `{ code, resource?, params? }` via `bad()`.
 - **Resources:** Register every new domain resource name in the `RESOURCES` tuple in `src/helpers/errors.ts`.
-- **Validation & machine codes:** Validate JSON bodies with `validateJson(schema, resource)` (`src/validators/authValidators.ts`) and read validated output with `c.req.valid("json")`. All field error values in `params` (`Record<string, string>`) must be short machine codes (e.g., `required`, `invalid_email`, `password_too_short`, `already_exists`) so the client handles translations.
+- **Validation & machine codes:** Validate JSON bodies with `validateJson(schema, resource)` and route params with `validateParams(schema, resource)` (`src/validators/validate.ts`), and read validated output with `c.req.valid("json")` / `c.req.valid("param")`. All field error values in `params` (`Record<string, string>`) must be short machine codes (e.g., `required`, `invalid_email`, `password_too_short`, `already_exists`) so the client handles translations. Keep `docs/ERRORS.md` updated whenever adding or changing error codes, resources, or field machine codes.
 - **Authentication:** Protect routes or routers with `requireAuth` (`src/middleware/auth.ts`) and read the authenticated user payload (`{ sub, email, firstName, lastName }`) via `c.get("user")`.
+- **Domain & Business Rules:** Follow the entity invariants documented in `docs/DOMAIN.md` (and keep `docs/DOMAIN.md` updated when business rules evolve).
 
 ## Database & Environment Workflow
 - **Local secrets:** Keep local secrets in `.env` (copied from `.env.example`, loaded by both Wrangler and `drizzle.config.ts` via `dotenv/config`). Keep `.env` as the sole local env file (creating `.dev.vars` would cause Wrangler to ignore `.env`).

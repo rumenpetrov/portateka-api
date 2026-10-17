@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import "dotenv/config";
 import { getDb } from "../../src/db/index.ts";
-import { users } from "../../src/db/schema.ts";
+import { properties, users } from "../../src/db/schema.ts";
 import { hashPassword } from "../../src/utils/password.ts";
 import { generateToken } from "../../src/utils/jwt.ts";
 
@@ -58,6 +58,35 @@ export async function createTestUser(
   return { user, token, rawPassword: defaultData.password };
 }
 
+export async function createTestProperty(
+  userId: string,
+  propertyData: Partial<{
+    name: string;
+    description: string | null;
+    notes: string | null;
+    preferred: boolean;
+  }> = {},
+) {
+  const [property] = await testDb
+    .insert(properties)
+    .values({
+      userId,
+      name: propertyData.name ?? `Test Property ${Date.now()}`,
+      description: propertyData.description ?? "Test description",
+      notes: propertyData.notes ?? null,
+      preferred: propertyData.preferred ?? false,
+    })
+    .returning();
+
+  if (!property) {
+    throw new Error("Failed to insert test property");
+  }
+
+  return property;
+}
+
 export async function cleanupDatabase() {
+  await testDb.delete(properties);
   await testDb.delete(users);
 }
+

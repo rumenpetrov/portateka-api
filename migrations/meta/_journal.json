@@ -15,6 +15,20 @@
       "when": 1792175699778,
       "tag": "0001_chemical_spiral",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792238735523,
+      "tag": "0002_outgoing_purifiers",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792239565611,
+      "tag": "0003_steady_speed",
+      "breakpoints": true
     }
   ]
 }
