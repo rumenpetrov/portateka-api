@@ -4,6 +4,13 @@ An API for a real estate portfolio management hub, built with **Hono** on **Clou
 
 ---
 
+## Requirements
+
+- **Node.js:** `>=24.22.0`
+- **npm:** `>=11.19.1` (enforced via `devEngines` in `package.json`)
+
+---
+
 ## Local Setup
 
 1. **Install dependencies:**
