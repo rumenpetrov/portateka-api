@@ -113,3 +113,15 @@ Defined in [`src/validators/propertyValidators.ts`](../src/validators/propertyVa
 | `notes` | `too_long` | `422 VALIDATION_ERROR` | Exceeds `2000` characters (`POST`, `PATCH`). |
 | `preferred` | `invalid_type` | `422 VALIDATION_ERROR` | Provided and is not a boolean (`POST`, `PATCH`). |
 | `preferred` | `cannot_unset_only_property` | `422 VALIDATION_ERROR` | Attempting to `PATCH` `preferred: false` when the user has only `1` property in total. |
+
+---
+
+## 3. Edge / WAF Responses (Cloudflare)
+
+Before requests reach the Worker (`portateka-api.rpetrov.dev`), Cloudflare WAF evaluates edge security rules. On the Cloudflare Free plan, blocked requests return Cloudflare's default edge body (HTML/text) rather than the JSON `ErrorResponse` shape. Clients should check `response.status` before attempting to parse JSON on these statuses:
+
+| HTTP Status | WAF Rule | Trigger Condition | Mitigation / Behavior |
+| :---: | :--- | :--- | :--- |
+| `429 Too Many Requests` | Rate limiting rule | More than `5` `POST` requests per `10 seconds` from the same IP to `/api/auth/*`. | Blocks matching requests from that IP with HTTP `429` for `10 seconds`. |
+| `403 Forbidden` | Custom WAF rule | Request path does not start with `/api/` and is not `/health`. | Immediately blocks non-API traffic at the edge with HTTP `403`. |
+
