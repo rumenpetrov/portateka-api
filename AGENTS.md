@@ -9,15 +9,16 @@
   3. **Execute & verify:** After confirmation, apply the changes and verify them (`npm run typecheck` and a quick runtime/endpoint check) before moving to the next step.
 
 ## Runtime & Stack
-- **Platform:** Cloudflare Workers (`wrangler.jsonc`, entry `src/index.ts`).
+- **Platform:** Cloudflare Workers (`wrangler.jsonc` with `nodejs_compat`, entry `src/index.ts`), designed to remain portable to Node.js and avoid vendor lock-in.
 - **Framework:** Hono typed with `AppEnv` (`src/types/env.ts` — binds `CloudflareBindings` and context `Variables`).
 - **Database:** Neon Serverless Postgres (`@neondatabase/serverless` HTTP driver) + Drizzle ORM (`src/db/index.ts`, `src/db/schema.ts`).
-- **Validation:** Zod v4 + `@hono/zod-validator`.
+- **Validation & Testing:** Zod v4 + `@hono/zod-validator`, Vitest (`tests/`).
 
-## Cloudflare Workers Rules
-- **Per-request bindings:** Read environment secrets from `c.env` inside handlers or middleware (`getDb(c.env.DATABASE_URL)`, `c.env.JWT_SECRET`). Module top-level has no access to bindings.
+## Runtime Portability & Cloudflare Workers Rules
+- **Avoid vendor lock-in:** Keep application code compatible with standard Node.js and Web APIs (`fetch`, `Request`, `Response`, standard WebCrypto, `node:*` built-ins) so the app can run on Node.js or switch hosting providers without rewriting business logic. Avoid Cloudflare-proprietary runtime APIs.
+- **Per-request bindings:** Read environment secrets from `c.env` inside handlers or middleware (`getDb(c.env.DATABASE_URL)`, `c.env.JWT_SECRET`). Module top-level has no access to bindings in Workers.
 - **Stateless DB client:** Call `getDb(c.env.DATABASE_URL)` per request. The `neon-http` driver executes stateless HTTPS queries.
-- **Web-standard crypto:** Use WebCrypto (`crypto.subtle` PBKDF2-SHA256 at `100,000` iterations in `src/utils/password.ts`, constant-time comparison via `crypto.subtle.timingSafeEqual`) and `jose` (`src/utils/jwt.ts`) for HS256 JWTs.
+- **Portable crypto:** Use WebCrypto (`crypto.subtle` PBKDF2-SHA256 at `100,000` iterations in `src/utils/password.ts`), `timingSafeEqual` from `node:crypto`, and `jose` (`src/utils/jwt.ts`) for HS256 JWTs.
 - **Generated types:** Runtime and binding types live in `worker-configuration.d.ts`. Run `npm run cf-typegen` after changing bindings in `.env` or `wrangler.jsonc`, then verify with `npm run typecheck`.
 
 ## API, Validation & Error Conventions

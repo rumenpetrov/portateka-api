@@ -17,6 +17,8 @@
   },
   "include": [
     "src/**/*",
+    "tests/**/*",
+    "vitest.config.ts",
     "worker-configuration.d.ts"
   ],
   "exclude": [

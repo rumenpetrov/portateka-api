@@ -1,3 +1,5 @@
+import { timingSafeEqual } from "node:crypto";
+
 // Workers' WebCrypto caps PBKDF2 at 100,000 iterations.
 const ITERATIONS = 100_000;
 const SALT_BYTES = 16;
@@ -62,7 +64,7 @@ export const verifyPassword = async (
       return false;
     }
 
-    return crypto.subtle.timingSafeEqual(actual, expected);
+    return timingSafeEqual(actual, expected);
   } catch {
     return false;
   }
