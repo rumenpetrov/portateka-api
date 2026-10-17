@@ -10,5 +10,8 @@
       "custom_domain": true,
     },
   ],
-  "vars": {},
+  "vars": {
+    "WEB_APP_BASE_URL": "https://portateka.rpetrov.dev",
+    "WEB_APP_VERIFY_EMAIL_PREFIX": "/verify-email",
+  },
 }

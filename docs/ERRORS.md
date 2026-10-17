@@ -51,15 +51,17 @@ These responses do not map form input fields to validation machine codes:
 | :--- | :---: | :--- | :--- | :--- |
 | Unknown endpoint (`app.notFound`) | `404` | `NOT_FOUND` | `route` | *(omitted)* |
 | Property not found or owned by another user | `404` | `NOT_FOUND` | `property` | `{ "id": "<requested-uuid>" }` |
+| User from verification token no longer exists | `404` | `NOT_FOUND` | `user` | `{ "id": "<user-uuid>" }` |
 | Missing/invalid JWT or bad login credentials | `401` | `UNAUTHORIZED` | `user` | *(omitted)* |
 | Malformed JSON request body | `422` | `VALIDATION_ERROR` | *(omitted)* | *(omitted)* |
+| Verification email failed to send on sign-up | `500` | `INTERNAL_SERVER_ERROR` | `user` | *(omitted)* |
 | Unhandled exception | `500` | `INTERNAL_SERVER_ERROR` | *(omitted)* | *(omitted)* |
 
 ---
 
 ## 2. Form & Field Errors (`params`)
 
-When `code` is `VALIDATION_ERROR` (`422`) or `ALREADY_EXISTS` (`409`), `params` maps each invalid field name (`string`) to a short machine error code (`string`) that the frontend translates into localized field messages.
+When `code` is `VALIDATION_ERROR` (`422`), `ALREADY_EXISTS` (`409`), or `FORBIDDEN` (`403`), `params` maps each invalid field name (`string`) to a short machine error code (`string`) that the frontend translates into localized field messages.
 
 ### Shared Field Machine Codes
 
@@ -82,7 +84,7 @@ Defined in [`src/validators/authValidators.ts`](../src/validators/authValidators
 | `email` | `required` | `422 VALIDATION_ERROR` | Missing or not a string (`sign-up/email`, `sign-in/email`). |
 | `email` | `too_long` | `422 VALIDATION_ERROR` | Exceeds `255` characters (`sign-up/email`). |
 | `email` | `invalid_email` | `422 VALIDATION_ERROR` | Fails email format validation (`sign-up/email`, `sign-in/email`). |
-| `email` | `already_exists` | `409 ALREADY_EXISTS` | Email is already registered (`sign-up/email`). |
+| `email` | `email_not_verified` | `403 FORBIDDEN` | User credentials are valid, but `emailVerified` is `false` (`sign-in/email`). |
 | `firstName` | `required` | `422 VALIDATION_ERROR` | Missing, not a string, or empty after `.trim()` (`sign-up/email`). |
 | `firstName` | `too_long` | `422 VALIDATION_ERROR` | Exceeds `50` characters (`sign-up/email`). |
 | `lastName` | `invalid_type` | `422 VALIDATION_ERROR` | Provided as a non-string value (`sign-up/email`). |
@@ -95,6 +97,8 @@ Defined in [`src/validators/authValidators.ts`](../src/validators/authValidators
 | `password` | `password_missing_lowercase` | `422 VALIDATION_ERROR` | Does not contain at least one lowercase letter `[a-z]` (`sign-up/email`). |
 | `password` | `password_missing_number` | `422 VALIDATION_ERROR` | Does not contain at least one digit `\d` (`sign-up/email`). |
 | `password` | `password_missing_special` | `422 VALIDATION_ERROR` | Does not contain at least one special character `[^A-Za-z0-9]` (`sign-up/email`). |
+| `token` | `required` | `422 VALIDATION_ERROR` | Missing, not a string, or empty after `.trim()` (`verify-email`). |
+| `token` | `invalid_or_expired_token` | `422 VALIDATION_ERROR` | Verification JWT signature is invalid, expired, or not an `email_verification` token (`verify-email`). |
 
 ---
 

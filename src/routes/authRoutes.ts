@@ -1,10 +1,16 @@
 import { Hono } from "hono";
-import { me, signInEmail, signUpEmail } from "../controllers/authController";
+import {
+  me,
+  signInEmail,
+  signUpEmail,
+  verifyEmail,
+} from "../controllers/authController";
 import { requireAuth } from "../middleware/auth";
 import {
   signInEmailSchema,
   signUpEmailSchema,
   validateJson,
+  verifyEmailSchema,
 } from "../validators/authValidators";
 import type { AppEnv } from "../types/env";
 
@@ -19,6 +25,11 @@ app.post(
   "/sign-in/email",
   validateJson(signInEmailSchema, "user"),
   signInEmail,
+);
+app.post(
+  "/verify-email",
+  validateJson(verifyEmailSchema, "user"),
+  verifyEmail,
 );
 app.get("/me", requireAuth, me);
 

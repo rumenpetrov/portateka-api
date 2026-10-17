@@ -43,8 +43,10 @@ jobs:
             DATABASE_URL
             TEST_DATABASE_URL
             JWT_SECRET
+            RESEND_API_KEY
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
 

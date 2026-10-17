@@ -1,10 +1,15 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import app from "../src/index.ts";
 import {
   cleanupDatabase,
   createTestUser,
+  testDb,
   testEnv,
 } from "./helpers/dbHelpers.ts";
+import { users } from "../src/db/schema.ts";
+import { eq } from "drizzle-orm";
+import { generateEmailVerificationToken } from "../src/utils/jwt.ts";
+import * as emailUtils from "../src/utils/email.ts";
 
 const jsonRequest = (path: string, body: unknown, headers?: HeadersInit) =>
   app.request(
@@ -22,11 +27,13 @@ const jsonRequest = (path: string, body: unknown, headers?: HeadersInit) =>
 
 describe("Authentication Endpoints", () => {
   afterEach(async () => {
+    vi.restoreAllMocks();
     await cleanupDatabase();
   });
 
   describe("POST /api/auth/sign-up/email", () => {
-    it("should register a new user with valid data", async () => {
+    it("should register a new user with emailVerified=false and return verification_email_sent", async () => {
+      const sendSpy = vi.spyOn(emailUtils, "sendVerificationEmail");
       const userData = {
         email: `Test-${Date.now()}@Example.com`,
         firstName: "John",
@@ -37,20 +44,51 @@ describe("Authentication Endpoints", () => {
       const response = await jsonRequest("/api/auth/sign-up/email", userData);
       const body = await response.json();
 
-      expect(response.status).toBe(201);
+      expect(response.status).toBe(200);
       expect(body).toEqual({
         data: {
-          id: expect.any(String),
-          email: userData.email.toLowerCase(),
-          firstName: "John",
-          lastName: "Doe",
-          createdAt: expect.any(String),
+          message: "verification_email_sent",
         },
       });
+      expect(sendSpy).toHaveBeenCalledTimes(1);
+
+      const [dbUser] = await testDb
+        .select()
+        .from(users)
+        .where(eq(users.email, userData.email.toLowerCase()));
+      expect(dbUser).toBeDefined();
+      expect(dbUser?.emailVerified).toBe(false);
     });
 
-    it("should return 409 for duplicate email", async () => {
-      const { user } = await createTestUser();
+    it("should roll back user creation and return 500 if verification email fails to send", async () => {
+      vi.spyOn(emailUtils, "sendVerificationEmail").mockRejectedValueOnce(
+        new Error("Resend API error"),
+      );
+
+      const email = `rollback-${Date.now()}@example.com`;
+      const response = await jsonRequest("/api/auth/sign-up/email", {
+        email,
+        firstName: "Rollback",
+        password: "TestPassword123!",
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(500);
+      expect(body).toEqual({
+        code: "INTERNAL_SERVER_ERROR",
+        resource: "user",
+      });
+
+      const dbUsers = await testDb
+        .select()
+        .from(users)
+        .where(eq(users.email, email));
+      expect(dbUsers).toHaveLength(0);
+    });
+
+    it("should return 200 verification_email_sent without sending email for already verified email", async () => {
+      const { user } = await createTestUser({ emailVerified: true });
+      const sendSpy = vi.spyOn(emailUtils, "sendVerificationEmail");
 
       const response = await jsonRequest("/api/auth/sign-up/email", {
         email: user.email,
@@ -59,14 +97,33 @@ describe("Authentication Endpoints", () => {
       });
       const body = await response.json();
 
-      expect(response.status).toBe(409);
+      expect(response.status).toBe(200);
       expect(body).toEqual({
-        code: "ALREADY_EXISTS",
-        resource: "user",
-        params: {
-          email: "already_exists",
+        data: {
+          message: "verification_email_sent",
         },
       });
+      expect(sendSpy).not.toHaveBeenCalled();
+    });
+
+    it("should resend verification email and return 200 when existing user is unverified", async () => {
+      const { user } = await createTestUser({ emailVerified: false });
+      const sendSpy = vi.spyOn(emailUtils, "sendVerificationEmail");
+
+      const response = await jsonRequest("/api/auth/sign-up/email", {
+        email: user.email,
+        firstName: "UpdatedName",
+        password: "TestPassword123!",
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body).toEqual({
+        data: {
+          message: "verification_email_sent",
+        },
+      });
+      expect(sendSpy).toHaveBeenCalledTimes(1);
     });
 
     it("should return 422 for invalid email", async () => {
@@ -106,9 +163,55 @@ describe("Authentication Endpoints", () => {
     });
   });
 
+  describe("POST /api/auth/verify-email", () => {
+    it("should verify a user's email with a valid verification token", async () => {
+      const { user } = await createTestUser({ emailVerified: false });
+      const verificationToken = await generateEmailVerificationToken(
+        { sub: user.id, email: user.email },
+        testEnv.JWT_SECRET,
+      );
+
+      const response = await jsonRequest("/api/auth/verify-email", {
+        token: verificationToken,
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body).toEqual({
+        data: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          emailVerified: true,
+          createdAt: expect.any(String),
+          updatedAt: expect.any(String),
+        },
+      });
+    });
+
+    it("should return 422 for an invalid or expired verification token", async () => {
+      const response = await jsonRequest("/api/auth/verify-email", {
+        token: "invalid.jwt.token",
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(422);
+      expect(body).toEqual({
+        code: "VALIDATION_ERROR",
+        resource: "user",
+        params: {
+          token: "invalid_or_expired_token",
+        },
+      });
+    });
+  });
+
   describe("POST /api/auth/sign-in/email", () => {
-    it("should login with valid credentials", async () => {
-      const { user, rawPassword } = await createTestUser();
+    it("should login with valid credentials when email is verified", async () => {
+      const { user, rawPassword } = await createTestUser({
+        emailVerified: true,
+      });
 
       const response = await jsonRequest("/api/auth/sign-in/email", {
         email: user.email,
@@ -125,7 +228,29 @@ describe("Authentication Endpoints", () => {
             email: user.email,
             firstName: user.firstName,
             lastName: user.lastName,
+            emailVerified: true,
           },
+        },
+      });
+    });
+
+    it("should return 403 when email is not verified", async () => {
+      const { user, rawPassword } = await createTestUser({
+        emailVerified: false,
+      });
+
+      const response = await jsonRequest("/api/auth/sign-in/email", {
+        email: user.email,
+        password: rawPassword,
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(403);
+      expect(body).toEqual({
+        code: "FORBIDDEN",
+        resource: "user",
+        params: {
+          email: "email_not_verified",
         },
       });
     });
@@ -199,6 +324,7 @@ describe("Authentication Endpoints", () => {
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
+          emailVerified: true,
           createdAt: expect.any(String),
           updatedAt: expect.any(String),
         },

@@ -1,15 +1,26 @@
 import type { Context } from "hono";
-import { ApiError, DuplicateApiError } from "../helpers/errors";
+import {
+  ApiError,
+  InternalServerApiError,
+  NotFoundApiError,
+  ValidationApiError,
+} from "../helpers/errors";
 import { ok } from "../helpers/responses";
 import { getDb } from "../db";
 import { users } from "../db/schema";
 import { hashPassword, verifyPassword } from "../utils/password";
-import { generateToken } from "../utils/jwt";
-import { eq } from "drizzle-orm";
+import {
+  generateEmailVerificationToken,
+  generateToken,
+  verifyEmailVerificationToken,
+} from "../utils/jwt";
+import { sendVerificationEmail } from "../utils/email";
+import { and, eq } from "drizzle-orm";
 import type { z } from "zod";
 import type {
   signUpEmailSchema,
   signInEmailSchema,
+  verifyEmailSchema,
 } from "../validators/authValidators";
 import type { AppEnv } from "../types/env";
 
@@ -25,57 +36,99 @@ type SignInEmailContext = Context<
   { in: { json: unknown }; out: { json: z.output<typeof signInEmailSchema> } }
 >;
 
+type VerifyEmailContext = Context<
+  AppEnv,
+  string,
+  { in: { json: unknown }; out: { json: z.output<typeof verifyEmailSchema> } }
+>;
+
 type AuthContext = Context<AppEnv>;
 
 // Constant decoy hash used when user is not found to prevent timing-based user enumeration.
 const DECOY_HASH =
   "pbkdf2$sha256$100000$3qLFHGqxTSVbhRfdCjTUlA==$Oe07AH4z7xVtEX03/3RzLSsbhWRoCxYwRiTmp4q+eWo=";
 
-const UNIQUE_VIOLATION = "23505";
-
-// Drizzle may wrap the driver error, so look at `cause` too.
-const getPgError = (err: unknown) => {
-  const candidates = [err, (err as { cause?: unknown } | null)?.cause];
-
-  return candidates.find(
-    (e): e is { code: string; constraint?: string } =>
-      typeof e === "object" &&
-      e !== null &&
-      (e as { code?: unknown }).code === UNIQUE_VIOLATION,
-  );
-};
-
 export const signUpEmail = async (c: SignUpEmailContext) => {
   const { email, firstName, lastName, password } = c.req.valid("json");
   const db = getDb(c.env.DATABASE_URL);
 
-  try {
-    const [user] = await db
+  // Always hash password first for consistent timing regardless of whether the email exists.
+  const hashedPassword = await hashPassword(password);
+
+  const [existingUser] = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      emailVerified: users.emailVerified,
+    })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+
+  // If the account already exists and is verified, return the same response silently (protects against enumeration and email quota burn).
+  if (existingUser?.emailVerified) {
+    return ok(c, { message: "verification_email_sent" });
+  }
+
+  let targetUserId: string;
+  let isNewUser = false;
+
+  if (existingUser) {
+    // Existing unverified account: update details and resend verification email.
+    await db
+      .update(users)
+      .set({
+        firstName,
+        lastName: lastName ?? null,
+        password: hashedPassword,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, existingUser.id));
+
+    targetUserId = existingUser.id;
+  } else {
+    const [createdUser] = await db
       .insert(users)
       .values({
         email,
         firstName,
         lastName,
-        password: await hashPassword(password),
+        password: hashedPassword,
       })
       .returning({
         id: users.id,
-        email: users.email,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        createdAt: users.createdAt,
       });
 
-    return ok({ c, status: 201 }, user!);
-  } catch (err) {
-    const pgError = getPgError(err);
-
-    if (pgError) {
-      throw new DuplicateApiError("user", { email: "already_exists" });
-    }
-
-    throw err;
+    targetUserId = createdUser!.id;
+    isNewUser = true;
   }
+
+  try {
+    const verificationToken = await generateEmailVerificationToken(
+      {
+        sub: targetUserId,
+        email,
+      },
+      c.env.JWT_SECRET,
+    );
+
+    await sendVerificationEmail({
+      to: email,
+      firstName,
+      token: verificationToken,
+      webAppBaseUrl: c.env.WEB_APP_BASE_URL,
+      verifyEmailPrefix: c.env.WEB_APP_VERIFY_EMAIL_PREFIX,
+      resendApiKey: c.env.RESEND_API_KEY,
+    });
+  } catch (err) {
+    console.error("Failed to send verification email:", err);
+    if (isNewUser) {
+      await db.delete(users).where(eq(users.id, targetUserId));
+    }
+    throw new InternalServerApiError("user");
+  }
+
+  return ok(c, { message: "verification_email_sent" });
 };
 
 export const signInEmail = async (c: SignInEmailContext) => {
@@ -89,6 +142,7 @@ export const signInEmail = async (c: SignInEmailContext) => {
       firstName: users.firstName,
       lastName: users.lastName,
       password: users.password,
+      emailVerified: users.emailVerified,
     })
     .from(users)
     .where(eq(users.email, email))
@@ -100,6 +154,10 @@ export const signInEmail = async (c: SignInEmailContext) => {
 
   if (!user || !isValid) {
     throw new ApiError("UNAUTHORIZED", "user");
+  }
+
+  if (!user.emailVerified) {
+    throw new ApiError("FORBIDDEN", "user", { email: "email_not_verified" });
   }
 
   const token = await generateToken(
@@ -119,8 +177,44 @@ export const signInEmail = async (c: SignInEmailContext) => {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      emailVerified: user.emailVerified,
     },
   });
+};
+
+export const verifyEmail = async (c: VerifyEmailContext) => {
+  const { token } = c.req.valid("json");
+  const db = getDb(c.env.DATABASE_URL);
+
+  let payload: { sub: string; email: string };
+  try {
+    payload = await verifyEmailVerificationToken(token, c.env.JWT_SECRET);
+  } catch {
+    throw new ValidationApiError("user", { token: "invalid_or_expired_token" });
+  }
+
+  const [updatedUser] = await db
+    .update(users)
+    .set({
+      emailVerified: true,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(users.id, payload.sub), eq(users.email, payload.email)))
+    .returning({
+      id: users.id,
+      email: users.email,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      emailVerified: users.emailVerified,
+      createdAt: users.createdAt,
+      updatedAt: users.updatedAt,
+    });
+
+  if (!updatedUser) {
+    throw new NotFoundApiError("user", { id: payload.sub });
+  }
+
+  return ok(c, updatedUser);
 };
 
 export const me = async (c: AuthContext) => {
@@ -133,6 +227,7 @@ export const me = async (c: AuthContext) => {
       email: users.email,
       firstName: users.firstName,
       lastName: users.lastName,
+      emailVerified: users.emailVerified,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
     })

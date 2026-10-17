@@ -25,11 +25,13 @@ async function seed() {
           firstName: "John",
           lastName: "Doe",
           password,
+          emailVerified: true,
         },
         {
           email: "jane@example.com",
           firstName: "Jane",
           password,
+          emailVerified: true,
         },
       ])
       .returning();

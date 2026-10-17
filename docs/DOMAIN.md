@@ -1,5 +1,20 @@
 # Domain & Business Rules (`portateka-api`)
 
+## Users & Authentication (`users`)
+
+### Registration & Email Verification
+- **Default verification state:** Every newly registered user (`POST /api/auth/sign-up/email`) starts with `emailVerified = false`.
+- **Enumeration-safe sign-up response:** `POST /api/auth/sign-up/email` always returns `200 OK` with `{ data: { message: "verification_email_sent" } }` so callers cannot determine whether an email is already registered:
+  - **New email:** Inserts the user (`emailVerified = false`) and sends the verification email.
+  - **Existing unverified email (`emailVerified = false`):** Updates the user's name/password and resends a fresh verification email.
+  - **Existing verified email (`emailVerified = true`):** Performs password hashing for constant-time protection, sends **no email** (avoiding spam and preserving Resend quota), and returns the same `{ data: { message: "verification_email_sent" } }` response.
+- **Verification email delivery & atomic rollback:** Upon sign-up, the API generates a signed HS256 JWT verification token (`purpose: "email_verification"`, valid for `24h`) and sends a link (`${WEB_APP_BASE_URL}${WEB_APP_VERIFY_EMAIL_PREFIX}?token=...`) to the user's email address via Resend (`RESEND_API_KEY`). If sending the verification email fails for a newly created user, that user row is immediately deleted from `users` and the endpoint returns `500 INTERNAL_SERVER_ERROR` (`resource: "user"`).
+- **Local/Test fallback:** When `RESEND_API_KEY` is empty or omitted (local development and automated tests), the API skips the external HTTP request and logs the verification link to the console so no Resend quota is consumed.
+- **Email verification (`POST /api/auth/verify-email`):** Accepts `{ token }` from the frontend, verifies the JWT signature, expiration, and `purpose: "email_verification"` claim, and sets `emailVerified = true` on the matching user.
+- **Sign-in guard (`POST /api/auth/sign-in/email`):** After verifying email and password credentials, if `user.emailVerified === false`, sign-in is rejected with `403 FORBIDDEN` (`resource: "user"`, `params: { email: "email_not_verified" }`). Session JWTs expire in `8h`.
+
+---
+
 ## Properties (`properties`)
 
 ### Ownership & Isolation
@@ -12,3 +27,4 @@
 - **First property is always preferred:** When a user has `0` existing properties and creates a new property, `preferred` is automatically set to `true` (regardless of whether `preferred` was omitted or passed as `false`).
 - **Switching preferred property:** When a user creates or updates (`PATCH`) a property with `preferred: true`, any previously preferred property belonging to that user is automatically updated to `preferred: false`.
 - **Unsetting preferred on a single property is disallowed:** If a user has only `1` property in total, they cannot `PATCH` it with `preferred: false` (returns `422 VALIDATION_ERROR` on `property` with `{ preferred: "cannot_unset_only_property" }`). Unsetting `preferred: false` is only allowed when the user has more than 1 property.
+

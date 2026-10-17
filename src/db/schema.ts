@@ -16,6 +16,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name", { length: 50 }),
   // Stores the password hash, never the plain password.
   password: varchar("password", { length: 255 }).notNull(),
+  emailVerified: boolean("email_verified").default(false).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

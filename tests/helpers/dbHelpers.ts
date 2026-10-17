@@ -9,6 +9,11 @@ export const testEnv: CloudflareBindings = {
   DATABASE_URL: process.env.TEST_DATABASE_URL!,
   TEST_DATABASE_URL: process.env.TEST_DATABASE_URL!,
   JWT_SECRET: process.env.JWT_SECRET!,
+  RESEND_API_KEY: "",
+  WEB_APP_BASE_URL:
+    process.env.WEB_APP_BASE_URL ?? "https://portateka.rpetrov.dev",
+  WEB_APP_VERIFY_EMAIL_PREFIX:
+    process.env.WEB_APP_VERIFY_EMAIL_PREFIX ?? "/verify-email",
 };
 
 export const testDb = getDb(testEnv.DATABASE_URL);
@@ -19,6 +24,7 @@ export async function createTestUser(
     firstName: string;
     lastName: string | null;
     password: string;
+    emailVerified: boolean;
   }> = {},
 ) {
   const defaultData = {
@@ -26,6 +32,7 @@ export async function createTestUser(
     firstName: "Test",
     lastName: "User" as string | null,
     password: "TestPassword123!",
+    emailVerified: true,
     ...userData,
   };
 
@@ -38,6 +45,7 @@ export async function createTestUser(
       firstName: defaultData.firstName,
       lastName: defaultData.lastName,
       password: hashedPassword,
+      emailVerified: defaultData.emailVerified,
     })
     .returning();
 

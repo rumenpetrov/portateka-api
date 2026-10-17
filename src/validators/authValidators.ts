@@ -39,3 +39,8 @@ export const signInEmailSchema = z.object({
   password: z.string({ error: "required" }).min(1, "required"),
 });
 
+export const verifyEmailSchema = z.object({
+  token: z.string({ error: "required" }).trim().min(1, "required"),
+});
+
+
