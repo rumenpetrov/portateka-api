@@ -14,6 +14,8 @@ export const testEnv: CloudflareBindings = {
     process.env.WEB_APP_BASE_URL ?? "https://portateka.rpetrov.dev",
   WEB_APP_VERIFY_EMAIL_PREFIX:
     process.env.WEB_APP_VERIFY_EMAIL_PREFIX ?? "/verify-email",
+  WEB_APP_RESET_PASSWORD_PREFIX:
+    process.env.WEB_APP_RESET_PASSWORD_PREFIX ?? "/reset-password",
 };
 
 export const testDb = getDb(testEnv.DATABASE_URL);

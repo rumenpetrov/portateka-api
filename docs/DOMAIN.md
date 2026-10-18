@@ -13,6 +13,10 @@
 - **Email verification (`POST /api/auth/verify-email`):** Accepts `{ token }` from the frontend, verifies the JWT signature, expiration, and `purpose: "email_verification"` claim, and sets `emailVerified = true` on the matching user.
 - **Sign-in guard (`POST /api/auth/sign-in/email`):** After verifying email and password credentials, if `user.emailVerified === false`, sign-in is rejected with `403 FORBIDDEN` (`resource: "user"`, `params: { email: "email_not_verified" }`). Session JWTs expire in `8h`.
 
+### Password Reset
+- **Enumeration-safe forgot-password (`POST /api/auth/forgot-password`):** Always returns `200 OK` with `{ data: { message: "password_reset_email_sent" } }`. If the email exists, sends a reset link (`${WEB_APP_BASE_URL}${WEB_APP_RESET_PASSWORD_PREFIX}?token=...`) with a signed JWT (`purpose: "password_reset"`, valid for `1h`). If the email does not exist, no email is sent and the same response is returned.
+- **Single-use stateless reset token (`POST /api/auth/reset-password`):** The reset JWT embeds a 16-character slice of the user's current password hash (`pwdHashSlice`). When `POST /api/auth/reset-password` updates the user's password hash (and sets `emailVerified = true`), the embedded `pwdHashSlice` no longer matches the new password hash, automatically invalidating the token against reuse without requiring database token storage.
+
 ---
 
 ## Properties (`properties`)

@@ -11,13 +11,21 @@ import { users } from "../db/schema";
 import { hashPassword, verifyPassword } from "../utils/password";
 import {
   generateEmailVerificationToken,
+  generatePasswordResetToken,
   generateToken,
+  getPasswordHashSlice,
   verifyEmailVerificationToken,
+  verifyPasswordResetToken,
 } from "../utils/jwt";
-import { sendVerificationEmail } from "../utils/email";
+import {
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+} from "../utils/email";
 import { and, eq } from "drizzle-orm";
 import type { z } from "zod";
 import type {
+  forgotPasswordSchema,
+  resetPasswordSchema,
   signUpEmailSchema,
   signInEmailSchema,
   verifyEmailSchema,
@@ -40,6 +48,21 @@ type VerifyEmailContext = Context<
   AppEnv,
   string,
   { in: { json: unknown }; out: { json: z.output<typeof verifyEmailSchema> } }
+>;
+
+type ForgotPasswordContext = Context<
+  AppEnv,
+  string,
+  {
+    in: { json: unknown };
+    out: { json: z.output<typeof forgotPasswordSchema> };
+  }
+>;
+
+type ResetPasswordContext = Context<
+  AppEnv,
+  string,
+  { in: { json: unknown }; out: { json: z.output<typeof resetPasswordSchema> } }
 >;
 
 type AuthContext = Context<AppEnv>;
@@ -215,6 +238,90 @@ export const verifyEmail = async (c: VerifyEmailContext) => {
   }
 
   return ok(c, updatedUser);
+};
+
+export const forgotPassword = async (c: ForgotPasswordContext) => {
+  const { email } = c.req.valid("json");
+  const db = getDb(c.env.DATABASE_URL);
+
+  const [user] = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      firstName: users.firstName,
+      password: users.password,
+    })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+
+  if (!user) {
+    return ok(c, { message: "password_reset_email_sent" });
+  }
+
+  try {
+    const resetToken = await generatePasswordResetToken(
+      {
+        sub: user.id,
+        email: user.email,
+        pwdHashSlice: getPasswordHashSlice(user.password),
+      },
+      c.env.JWT_SECRET,
+    );
+
+    await sendPasswordResetEmail({
+      to: user.email,
+      firstName: user.firstName,
+      token: resetToken,
+      webAppBaseUrl: c.env.WEB_APP_BASE_URL,
+      resetPasswordPrefix: c.env.WEB_APP_RESET_PASSWORD_PREFIX,
+      resendApiKey: c.env.RESEND_API_KEY,
+    });
+  } catch (err) {
+    console.error("Failed to send password reset email:", err);
+    throw new InternalServerApiError("user");
+  }
+
+  return ok(c, { message: "password_reset_email_sent" });
+};
+
+export const resetPassword = async (c: ResetPasswordContext) => {
+  const { token, password } = c.req.valid("json");
+  const db = getDb(c.env.DATABASE_URL);
+
+  let payload: { sub: string; email: string; pwdHashSlice: string };
+  try {
+    payload = await verifyPasswordResetToken(token, c.env.JWT_SECRET);
+  } catch {
+    throw new ValidationApiError("user", { token: "invalid_or_expired_token" });
+  }
+
+  const [user] = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      password: users.password,
+    })
+    .from(users)
+    .where(and(eq(users.id, payload.sub), eq(users.email, payload.email)))
+    .limit(1);
+
+  if (!user || getPasswordHashSlice(user.password) !== payload.pwdHashSlice) {
+    throw new ValidationApiError("user", { token: "invalid_or_expired_token" });
+  }
+
+  const hashedPassword = await hashPassword(password);
+
+  await db
+    .update(users)
+    .set({
+      password: hashedPassword,
+      emailVerified: true,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, user.id));
+
+  return ok(c, { message: "password_reset_successful" });
 };
 
 export const me = async (c: AuthContext) => {

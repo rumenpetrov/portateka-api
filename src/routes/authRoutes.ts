@@ -1,12 +1,16 @@
 import { Hono } from "hono";
 import {
+  forgotPassword,
   me,
+  resetPassword,
   signInEmail,
   signUpEmail,
   verifyEmail,
 } from "../controllers/authController";
 import { requireAuth } from "../middleware/auth";
 import {
+  forgotPasswordSchema,
+  resetPasswordSchema,
   signInEmailSchema,
   signUpEmailSchema,
   validateJson,
@@ -30,6 +34,16 @@ app.post(
   "/verify-email",
   validateJson(verifyEmailSchema, "user"),
   verifyEmail,
+);
+app.post(
+  "/forgot-password",
+  validateJson(forgotPasswordSchema, "user"),
+  forgotPassword,
+);
+app.post(
+  "/reset-password",
+  validateJson(resetPasswordSchema, "user"),
+  resetPassword,
 );
 app.get("/me", requireAuth, me);
 

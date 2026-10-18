@@ -1,6 +1,15 @@
 import { z } from "zod";
 export { validateJson } from "./validate";
 
+const passwordFieldSchema = z
+  .string({ error: "required" })
+  .min(8, "password_too_short")
+  .max(128, "password_too_long")
+  .regex(/[A-Z]/, "password_missing_uppercase")
+  .regex(/[a-z]/, "password_missing_lowercase")
+  .regex(/\d/, "password_missing_number")
+  .regex(/[^A-Za-z0-9]/, "password_missing_special");
+
 // Messages are short machine codes; the client translates them.
 export const signUpEmailSchema = z.object({
   email: z
@@ -20,14 +29,7 @@ export const signUpEmailSchema = z.object({
     .min(1, "required")
     .max(50, "too_long")
     .optional(),
-  password: z
-    .string({ error: "required" })
-    .min(8, "password_too_short")
-    .max(128, "password_too_long")
-    .regex(/[A-Z]/, "password_missing_uppercase")
-    .regex(/[a-z]/, "password_missing_lowercase")
-    .regex(/\d/, "password_missing_number")
-    .regex(/[^A-Za-z0-9]/, "password_missing_special"),
+  password: passwordFieldSchema,
 });
 
 export const signInEmailSchema = z.object({
@@ -42,5 +44,19 @@ export const signInEmailSchema = z.object({
 export const verifyEmailSchema = z.object({
   token: z.string({ error: "required" }).trim().min(1, "required"),
 });
+
+export const forgotPasswordSchema = z.object({
+  email: z
+    .string({ error: "required" })
+    .trim()
+    .toLowerCase()
+    .pipe(z.email("invalid_email")),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string({ error: "required" }).trim().min(1, "required"),
+  password: passwordFieldSchema,
+});
+
 
 

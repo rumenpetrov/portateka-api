@@ -82,3 +82,51 @@ export const verifyEmailVerificationToken = async (
     email: payload.email,
   };
 };
+
+export interface PasswordResetPayload {
+  sub: string;
+  email: string;
+  pwdHashSlice: string;
+}
+
+export const getPasswordHashSlice = (passwordHash: string) =>
+  passwordHash.slice(-16);
+
+export const generatePasswordResetToken = (
+  payload: PasswordResetPayload,
+  secret: string,
+) =>
+  new SignJWT({
+    email: payload.email,
+    pwdHashSlice: payload.pwdHashSlice,
+    purpose: "password_reset",
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setSubject(payload.sub)
+    .setIssuedAt()
+    .setExpirationTime(SYSTEM_CONFIG.passwordResetExpiresIn)
+    .sign(encodeSecret(secret));
+
+export const verifyPasswordResetToken = async (
+  token: string,
+  secret: string,
+): Promise<PasswordResetPayload> => {
+  const { payload } = await jwtVerify(token, encodeSecret(secret), {
+    algorithms: ["HS256"],
+  });
+
+  if (
+    payload.purpose !== "password_reset" ||
+    typeof payload.sub !== "string" ||
+    typeof payload.email !== "string" ||
+    typeof payload.pwdHashSlice !== "string"
+  ) {
+    throw new Error("Invalid password reset token");
+  }
+
+  return {
+    sub: payload.sub,
+    email: payload.email,
+    pwdHashSlice: payload.pwdHashSlice,
+  };
+};

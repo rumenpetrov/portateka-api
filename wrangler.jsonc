@@ -13,5 +13,6 @@
   "vars": {
     "WEB_APP_BASE_URL": "https://portateka.rpetrov.dev",
     "WEB_APP_VERIFY_EMAIL_PREFIX": "/verify-email",
+    "WEB_APP_RESET_PASSWORD_PREFIX": "/reset-password",
   },
 }

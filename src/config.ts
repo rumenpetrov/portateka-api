@@ -3,5 +3,6 @@ export const SYSTEM_CONFIG = {
   apiVersion: "v1",
   jwtExpiresIn: "8h",
   emailVerificationExpiresIn: "24h",
+  passwordResetExpiresIn: "1h",
   emailFrom: "Portateka <noreply@portateka-api.rpetrov.dev>",
 } as const;

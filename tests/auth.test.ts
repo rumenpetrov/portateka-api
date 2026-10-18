@@ -8,7 +8,11 @@ import {
 } from "./helpers/dbHelpers.ts";
 import { users } from "../src/db/schema.ts";
 import { eq } from "drizzle-orm";
-import { generateEmailVerificationToken } from "../src/utils/jwt.ts";
+import {
+  generateEmailVerificationToken,
+  generatePasswordResetToken,
+  getPasswordHashSlice,
+} from "../src/utils/jwt.ts";
 import * as emailUtils from "../src/utils/email.ts";
 
 const jsonRequest = (path: string, body: unknown, headers?: HeadersInit) =>
@@ -361,4 +365,109 @@ describe("Authentication Endpoints", () => {
       });
     });
   });
+
+  describe("POST /api/auth/forgot-password", () => {
+    it("should send password reset email and return 200 for existing user", async () => {
+      const { user } = await createTestUser();
+      const sendSpy = vi.spyOn(emailUtils, "sendPasswordResetEmail");
+
+      const response = await jsonRequest("/api/auth/forgot-password", {
+        email: user.email,
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body).toEqual({
+        data: {
+          message: "password_reset_email_sent",
+        },
+      });
+      expect(sendSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("should return 200 without sending email for non-existent user (anti-enumeration)", async () => {
+      const sendSpy = vi.spyOn(emailUtils, "sendPasswordResetEmail");
+
+      const response = await jsonRequest("/api/auth/forgot-password", {
+        email: "nobody@example.com",
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body).toEqual({
+        data: {
+          message: "password_reset_email_sent",
+        },
+      });
+      expect(sendSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("POST /api/auth/reset-password", () => {
+    it("should reset password with valid token, mark emailVerified=true, and invalidate token for reuse", async () => {
+      const { user } = await createTestUser({ emailVerified: false });
+      const resetToken = await generatePasswordResetToken(
+        {
+          sub: user.id,
+          email: user.email,
+          pwdHashSlice: getPasswordHashSlice(user.password),
+        },
+        testEnv.JWT_SECRET,
+      );
+
+      const newPassword = "NewStrongPassword123!";
+      const response = await jsonRequest("/api/auth/reset-password", {
+        token: resetToken,
+        password: newPassword,
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body).toEqual({
+        data: {
+          message: "password_reset_successful",
+        },
+      });
+
+      // Verify user can sign in with new password
+      const signInResponse = await jsonRequest("/api/auth/sign-in/email", {
+        email: user.email,
+        password: newPassword,
+      });
+      expect(signInResponse.status).toBe(200);
+
+      // Reusing the same reset token must fail with 422
+      const reuseResponse = await jsonRequest("/api/auth/reset-password", {
+        token: resetToken,
+        password: "AnotherStrongPassword123!",
+      });
+      const reuseBody = await reuseResponse.json();
+      expect(reuseResponse.status).toBe(422);
+      expect(reuseBody).toEqual({
+        code: "VALIDATION_ERROR",
+        resource: "user",
+        params: {
+          token: "invalid_or_expired_token",
+        },
+      });
+    });
+
+    it("should return 422 for invalid reset token", async () => {
+      const response = await jsonRequest("/api/auth/reset-password", {
+        token: "invalid.jwt.token",
+        password: "NewStrongPassword123!",
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(422);
+      expect(body).toEqual({
+        code: "VALIDATION_ERROR",
+        resource: "user",
+        params: {
+          token: "invalid_or_expired_token",
+        },
+      });
+    });
+  });
 });
+
