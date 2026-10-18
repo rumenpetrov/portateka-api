@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { SYSTEM_CONFIG } from "./config";
+import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { HTTPException } from "hono/http-exception";
 import propertyRoutes from "./routes/propertyRoutes";
@@ -11,6 +12,18 @@ import type { AppEnv } from "./types/env";
 const app = new Hono<AppEnv>();
 
 app.use(logger());
+
+app.use(
+  "/api/*",
+  cors({
+    origin: (origin, c) => {
+      const allowedOrigin = c.env.WEB_APP_BASE_URL.replace(/\/+$/, "");
+      return origin === allowedOrigin ? origin : null;
+    },
+    allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization"],
+  }),
+);
 
 app.get("/health", (c) => {
   return c.json({
