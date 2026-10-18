@@ -53,7 +53,7 @@ These responses do not map form input fields to validation machine codes:
 | Property not found or owned by another user | `404` | `NOT_FOUND` | `property` | `{ "id": "<requested-uuid>" }` |
 | User from verification token no longer exists | `404` | `NOT_FOUND` | `user` | `{ "id": "<user-uuid>" }` |
 | Missing/invalid JWT or bad login credentials | `401` | `UNAUTHORIZED` | `user` | *(omitted)* |
-| Malformed JSON request body | `422` | `VALIDATION_ERROR` | *(omitted)* | *(omitted)* |
+| Malformed JSON or request body exceeding `16 KB` (`bodyLimit`) | `422` | `VALIDATION_ERROR` | *(omitted)* | *(omitted)* |
 | Verification email failed to send on sign-up | `500` | `INTERNAL_SERVER_ERROR` | `user` | *(omitted)* |
 | Unhandled exception | `500` | `INTERNAL_SERVER_ERROR` | *(omitted)* | *(omitted)* |
 

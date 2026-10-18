@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { SYSTEM_CONFIG } from "./config";
+import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
@@ -24,6 +25,10 @@ app.use(
     },
     allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
+  }),
+  bodyLimit({
+    maxSize: SYSTEM_CONFIG.maxBodySizeBytes,
+    onError: (c) => bad(c, "VALIDATION_ERROR"),
   }),
 );
 

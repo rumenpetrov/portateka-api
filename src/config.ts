@@ -5,4 +5,5 @@ export const SYSTEM_CONFIG = {
   emailVerificationExpiresIn: "24h",
   passwordResetExpiresIn: "1h",
   emailFrom: "Portateka <noreply@portateka-api.rpetrov.dev>",
+  maxBodySizeBytes: 16 * 1024,
 } as const;

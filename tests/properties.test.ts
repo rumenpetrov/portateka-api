@@ -133,6 +133,24 @@ describe("Properties Endpoints", () => {
         },
       });
     });
+
+    it("should return 422 when request body exceeds 16 KB limit", async () => {
+      const { token } = await createTestUser();
+
+      const response = await authRequest("/api/properties", token, {
+        method: "POST",
+        body: JSON.stringify({
+          name: "Oversized",
+          notes: "x".repeat(17 * 1024),
+        }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(422);
+      expect(body).toEqual({
+        code: "VALIDATION_ERROR",
+      });
+    });
   });
 
   describe("GET /api/properties", () => {
