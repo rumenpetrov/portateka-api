@@ -312,6 +312,23 @@ describe("Authentication Endpoints", () => {
       });
     });
 
+    it("should return 422 when password exceeds 128 characters", async () => {
+      const response = await jsonRequest("/api/auth/sign-in/email", {
+        email: "user@example.com",
+        password: "a".repeat(129),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(422);
+      expect(body).toEqual({
+        code: "VALIDATION_ERROR",
+        resource: "user",
+        params: {
+          password: "password_too_long",
+        },
+      });
+    });
+
     it("should return 401 for invalid password", async () => {
       const { user } = await createTestUser();
 

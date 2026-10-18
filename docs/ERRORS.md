@@ -82,7 +82,7 @@ Defined in [`src/validators/authValidators.ts`](../src/validators/authValidators
 | Field (`params` key) | Machine Code (`params` value) | HTTP Status / `code` | Trigger Rule |
 | :--- | :--- | :---: | :--- |
 | `email` | `required` | `422 VALIDATION_ERROR` | Missing or not a string (`sign-up/email`, `sign-in/email`, `forgot-password`). |
-| `email` | `too_long` | `422 VALIDATION_ERROR` | Exceeds `255` characters (`sign-up/email`). |
+| `email` | `too_long` | `422 VALIDATION_ERROR` | Exceeds `255` characters (`sign-up/email`, `sign-in/email`, `forgot-password`). |
 | `email` | `invalid_email` | `422 VALIDATION_ERROR` | Fails email format validation (`sign-up/email`, `sign-in/email`, `forgot-password`). |
 | `email` | `email_not_verified` | `403 FORBIDDEN` | User credentials are valid, but `emailVerified` is `false` (`sign-in/email`). |
 | `firstName` | `required` | `422 VALIDATION_ERROR` | Missing, not a string, or empty after `.trim()` (`sign-up/email`). |
@@ -92,7 +92,7 @@ Defined in [`src/validators/authValidators.ts`](../src/validators/authValidators
 | `lastName` | `too_long` | `422 VALIDATION_ERROR` | Exceeds `50` characters (`sign-up/email`). |
 | `password` | `required` | `422 VALIDATION_ERROR` | Missing or empty (`sign-up/email`, `sign-in/email`, `reset-password`). |
 | `password` | `password_too_short` | `422 VALIDATION_ERROR` | Fewer than `8` characters (`sign-up/email`, `reset-password`). |
-| `password` | `password_too_long` | `422 VALIDATION_ERROR` | Exceeds `128` characters (`sign-up/email`, `reset-password`). |
+| `password` | `password_too_long` | `422 VALIDATION_ERROR` | Exceeds `128` characters (`sign-up/email`, `sign-in/email`, `reset-password`). |
 | `password` | `password_missing_uppercase` | `422 VALIDATION_ERROR` | Does not contain at least one uppercase letter `[A-Z]` (`sign-up/email`, `reset-password`). |
 | `password` | `password_missing_lowercase` | `422 VALIDATION_ERROR` | Does not contain at least one lowercase letter `[a-z]` (`sign-up/email`, `reset-password`). |
 | `password` | `password_missing_number` | `422 VALIDATION_ERROR` | Does not contain at least one digit `\d` (`sign-up/email`, `reset-password`). |

@@ -37,8 +37,12 @@ export const signInEmailSchema = z.object({
     .string({ error: "required" })
     .trim()
     .toLowerCase()
+    .max(255, "too_long")
     .pipe(z.email("invalid_email")),
-  password: z.string({ error: "required" }).min(1, "required"),
+  password: z
+    .string({ error: "required" })
+    .min(1, "required")
+    .max(128, "password_too_long"),
 });
 
 export const verifyEmailSchema = z.object({
@@ -50,6 +54,7 @@ export const forgotPasswordSchema = z.object({
     .string({ error: "required" })
     .trim()
     .toLowerCase()
+    .max(255, "too_long")
     .pipe(z.email("invalid_email")),
 });
 
