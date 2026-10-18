@@ -171,7 +171,11 @@ describe("Authentication Endpoints", () => {
     it("should verify a user's email with a valid verification token", async () => {
       const { user } = await createTestUser({ emailVerified: false });
       const verificationToken = await generateEmailVerificationToken(
-        { sub: user.id, email: user.email },
+        {
+          sub: user.id,
+          email: user.email,
+          pwdHashSlice: getPasswordHashSlice(user.password),
+        },
         testEnv.JWT_SECRET,
       );
 
@@ -190,6 +194,39 @@ describe("Authentication Endpoints", () => {
           emailVerified: true,
           createdAt: expect.any(String),
           updatedAt: expect.any(String),
+        },
+      });
+    });
+
+    it("should reject an older verification token if an unverified user's password was overwritten", async () => {
+      const { user } = await createTestUser({ emailVerified: false });
+      const originalToken = await generateEmailVerificationToken(
+        {
+          sub: user.id,
+          email: user.email,
+          pwdHashSlice: getPasswordHashSlice(user.password),
+        },
+        testEnv.JWT_SECRET,
+      );
+
+      // Overwrite the unverified account via a subsequent sign-up call
+      await jsonRequest("/api/auth/sign-up/email", {
+        email: user.email,
+        firstName: "Overwritten",
+        password: "DifferentPassword123!",
+      });
+
+      const response = await jsonRequest("/api/auth/verify-email", {
+        token: originalToken,
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(422);
+      expect(body).toEqual({
+        code: "VALIDATION_ERROR",
+        resource: "user",
+        params: {
+          token: "invalid_or_expired_token",
         },
       });
     });

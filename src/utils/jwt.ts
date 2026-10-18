@@ -45,6 +45,7 @@ export const verifyToken = async (
 export interface EmailVerificationPayload {
   sub: string;
   email: string;
+  pwdHashSlice: string;
 }
 
 export const generateEmailVerificationToken = (
@@ -53,6 +54,7 @@ export const generateEmailVerificationToken = (
 ) =>
   new SignJWT({
     email: payload.email,
+    pwdHashSlice: payload.pwdHashSlice,
     purpose: "email_verification",
   })
     .setProtectedHeader({ alg: "HS256" })
@@ -72,7 +74,8 @@ export const verifyEmailVerificationToken = async (
   if (
     payload.purpose !== "email_verification" ||
     typeof payload.sub !== "string" ||
-    typeof payload.email !== "string"
+    typeof payload.email !== "string" ||
+    typeof payload.pwdHashSlice !== "string"
   ) {
     throw new Error("Invalid email verification token");
   }
@@ -80,6 +83,7 @@ export const verifyEmailVerificationToken = async (
   return {
     sub: payload.sub,
     email: payload.email,
+    pwdHashSlice: payload.pwdHashSlice,
   };
 };
 

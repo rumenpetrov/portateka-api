@@ -131,6 +131,7 @@ export const signUpEmail = async (c: SignUpEmailContext) => {
       {
         sub: targetUserId,
         email,
+        pwdHashSlice: getPasswordHashSlice(hashedPassword),
       },
       c.env.JWT_SECRET,
     );
@@ -209,10 +210,27 @@ export const verifyEmail = async (c: VerifyEmailContext) => {
   const { token } = c.req.valid("json");
   const db = getDb(c.env.DATABASE_URL);
 
-  let payload: { sub: string; email: string };
+  let payload: { sub: string; email: string; pwdHashSlice: string };
   try {
     payload = await verifyEmailVerificationToken(token, c.env.JWT_SECRET);
   } catch {
+    throw new ValidationApiError("user", { token: "invalid_or_expired_token" });
+  }
+
+  const [user] = await db
+    .select({
+      id: users.id,
+      password: users.password,
+    })
+    .from(users)
+    .where(and(eq(users.id, payload.sub), eq(users.email, payload.email)))
+    .limit(1);
+
+  if (!user) {
+    throw new NotFoundApiError("user", { id: payload.sub });
+  }
+
+  if (getPasswordHashSlice(user.password) !== payload.pwdHashSlice) {
     throw new ValidationApiError("user", { token: "invalid_or_expired_token" });
   }
 
@@ -222,7 +240,7 @@ export const verifyEmail = async (c: VerifyEmailContext) => {
       emailVerified: true,
       updatedAt: new Date(),
     })
-    .where(and(eq(users.id, payload.sub), eq(users.email, payload.email)))
+    .where(eq(users.id, user.id))
     .returning({
       id: users.id,
       email: users.email,
@@ -233,11 +251,7 @@ export const verifyEmail = async (c: VerifyEmailContext) => {
       updatedAt: users.updatedAt,
     });
 
-  if (!updatedUser) {
-    throw new NotFoundApiError("user", { id: payload.sub });
-  }
-
-  return ok(c, updatedUser);
+  return ok(c, updatedUser!);
 };
 
 export const forgotPassword = async (c: ForgotPasswordContext) => {

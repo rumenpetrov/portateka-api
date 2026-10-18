@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { SYSTEM_CONFIG } from "./config";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import { secureHeaders } from "hono/secure-headers";
 import { HTTPException } from "hono/http-exception";
 import propertyRoutes from "./routes/propertyRoutes";
 import authRoutes from "./routes/authRoutes";
@@ -12,6 +13,7 @@ import type { AppEnv } from "./types/env";
 const app = new Hono<AppEnv>();
 
 app.use(logger());
+app.use(secureHeaders());
 
 app.use(
   "/api/*",

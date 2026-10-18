@@ -11,6 +11,17 @@ export interface SendVerificationEmailParams {
   resendApiKey?: string;
 }
 
+const HTML_ESCAPE_MAP: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+
+export const escapeHtml = (value: string): string =>
+  value.replace(/[&<>"']/g, (char) => HTML_ESCAPE_MAP[char]!);
+
 export const buildVerificationUrl = (
   baseUrl: string,
   prefix: string,
@@ -43,6 +54,8 @@ export const sendVerificationEmail = async ({
     return;
   }
 
+  const safeFirstName = escapeHtml(firstName);
+
   const response = await fetch(RESEND_API_URL, {
     method: "POST",
     headers: {
@@ -54,7 +67,7 @@ export const sendVerificationEmail = async ({
       to: [to],
       subject: "Verify your Portateka email address",
       html: `
-        <p>Hello ${firstName},</p>
+        <p>Hello ${safeFirstName},</p>
         <p>Please verify your email address by clicking the link below:</p>
         <p><a href="${verificationUrl}">${verificationUrl}</a></p>
         <p>This link will expire in ${SYSTEM_CONFIG.emailVerificationExpiresIn}.</p>
@@ -99,6 +112,8 @@ export const sendPasswordResetEmail = async ({
     return;
   }
 
+  const safeFirstName = escapeHtml(firstName);
+
   const response = await fetch(RESEND_API_URL, {
     method: "POST",
     headers: {
@@ -110,7 +125,7 @@ export const sendPasswordResetEmail = async ({
       to: [to],
       subject: "Reset your Portateka password",
       html: `
-        <p>Hello ${firstName},</p>
+        <p>Hello ${safeFirstName},</p>
         <p>We received a request to reset your password. Click the link below to choose a new password:</p>
         <p><a href="${resetUrl}">${resetUrl}</a></p>
         <p>This link will expire in ${SYSTEM_CONFIG.passwordResetExpiresIn}. If you did not request a password reset, you can safely ignore this email.</p>
