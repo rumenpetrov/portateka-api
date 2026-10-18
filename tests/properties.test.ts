@@ -115,6 +115,35 @@ describe("Properties Endpoints", () => {
       expect(firstCheckBody.data.preferred).toBe(false);
     });
 
+    it("should atomically switch preferred property on concurrent preferred=true creations", async () => {
+      const { user, token } = await createTestUser();
+      await createTestProperty(user.id, {
+        name: "Initial Preferred",
+        preferred: true,
+      });
+
+      const [resA, resB] = await Promise.all([
+        authRequest("/api/properties", token, {
+          method: "POST",
+          body: JSON.stringify({ name: "Concurrent A", preferred: true }),
+        }),
+        authRequest("/api/properties", token, {
+          method: "POST",
+          body: JSON.stringify({ name: "Concurrent B", preferred: true }),
+        }),
+      ]);
+
+      expect(resA.status).toBe(201);
+      expect(resB.status).toBe(201);
+
+      const listRes = await authRequest("/api/properties", token);
+      const listBody = (await listRes.json()) as {
+        data: Array<{ preferred: boolean }>;
+      };
+      const preferredCount = listBody.data.filter((p) => p.preferred).length;
+      expect(preferredCount).toBe(1);
+    });
+
     it("should return 422 when name is missing", async () => {
       const { token } = await createTestUser();
 

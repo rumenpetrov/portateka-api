@@ -75,16 +75,7 @@ export const createPropertyEntry = async (c: CreatePropertyContext) => {
   // Business rule: a user's first property is always preferred.
   const isPreferred = userPropertyCount === 0 ? true : (preferred ?? false);
 
-  if (isPreferred && userPropertyCount > 0) {
-    await db
-      .update(properties)
-      .set({ preferred: false, updatedAt: new Date() })
-      .where(
-        and(eq(properties.userId, userId), eq(properties.preferred, true)),
-      );
-  }
-
-  const [newProperty] = await db
+  const insertQuery = db
     .insert(properties)
     .values({
       userId,
@@ -94,6 +85,22 @@ export const createPropertyEntry = async (c: CreatePropertyContext) => {
       preferred: isPreferred,
     })
     .returning();
+
+  if (isPreferred && userPropertyCount > 0) {
+    const [, [newProperty]] = await db.batch([
+      db
+        .update(properties)
+        .set({ preferred: false, updatedAt: new Date() })
+        .where(
+          and(eq(properties.userId, userId), eq(properties.preferred, true)),
+        ),
+      insertQuery,
+    ]);
+
+    return ok({ c, status: 201 }, newProperty!);
+  }
+
+  const [newProperty] = await insertQuery;
 
   return ok({ c, status: 201 }, newProperty!);
 };
@@ -145,24 +152,31 @@ export const updatePropertyEntry = async (c: UpdatePropertyContext) => {
     }
   }
 
-  if (updates.preferred === true && !existing.preferred) {
-    await db
-      .update(properties)
-      .set({ preferred: false, updatedAt: new Date() })
-      .where(
-        and(
-          eq(properties.userId, userId),
-          eq(properties.preferred, true),
-          ne(properties.id, id),
-        ),
-      );
-  }
-
-  const [updatedProperty] = await db
+  const updateQuery = db
     .update(properties)
     .set({ ...updates, updatedAt: new Date() })
     .where(and(eq(properties.id, id), eq(properties.userId, userId)))
     .returning();
+
+  if (updates.preferred === true && !existing.preferred) {
+    const [, [updatedProperty]] = await db.batch([
+      db
+        .update(properties)
+        .set({ preferred: false, updatedAt: new Date() })
+        .where(
+          and(
+            eq(properties.userId, userId),
+            eq(properties.preferred, true),
+            ne(properties.id, id),
+          ),
+        ),
+      updateQuery,
+    ]);
+
+    return ok(c, updatedProperty!);
+  }
+
+  const [updatedProperty] = await updateQuery;
 
   return ok(c, updatedProperty!);
 };
