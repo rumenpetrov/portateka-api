@@ -1,13 +1,18 @@
 /// <reference types="node" />
 import "dotenv/config";
 import { sql } from "drizzle-orm";
-import { getDb } from "./index.ts";
+import { confirmDestructiveDatabaseAction, getDb } from "./index.ts";
 
 async function reset() {
   try {
+    const databaseUrl = await confirmDestructiveDatabaseAction(
+      "db:reset (DROP SCHEMA public & drizzle)",
+      process.env.DATABASE_URL,
+    );
+
     console.log("🗑️  Resetting database schemas...");
 
-    const db = getDb(process.env.DATABASE_URL!);
+    const db = getDb(databaseUrl);
 
     await db.execute(sql`DROP SCHEMA IF EXISTS public CASCADE`);
     await db.execute(sql`CREATE SCHEMA public`);

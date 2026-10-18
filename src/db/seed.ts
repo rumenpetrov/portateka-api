@@ -1,14 +1,19 @@
 /// <reference types="node" />
 import "dotenv/config";
-import { getDb } from "./index.ts";
+import { confirmDestructiveDatabaseAction, getDb } from "./index.ts";
 import { properties, users } from "./schema.ts";
 import { hashPassword } from "../utils/password.ts";
 
 async function seed() {
   try {
+    const databaseUrl = await confirmDestructiveDatabaseAction(
+      "db:seed (DELETE all users & properties and insert demo accounts)",
+      process.env.DATABASE_URL,
+    );
+
     console.log("🌱 Starting database seed...");
 
-    const db = getDb(process.env.DATABASE_URL!);
+    const db = getDb(databaseUrl);
 
     console.log("Clearing existing data...");
     await db.delete(properties);
