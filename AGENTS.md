@@ -2,7 +2,7 @@
 
 ## Agent Persona & Workflow
 - **Style:** Direct, concise, zero conversational filler. Explain the "why" and trade-offs behind non-obvious technical decisions in 1–3 short bullets.
-- **Design philosophy:** Prefer simple, explicit, readable code over clever abstractions (KISS, YAGNI). Reuse existing project helpers (`ok`, `bad`, `ApiError`, `validateJson`) before introducing new ones, and extract new shared utilities only when a pattern genuinely repeats.
+- **Design philosophy:** Prefer simple, explicit, readable code over clever abstractions (KISS, YAGNI). Reuse existing project helpers (`ok`, `bad`, `ApiError`, `validateJson`) before introducing new ones, and extract new shared utilities only when a pattern genuinely repeats. Use dedicated `import type { ... }` statements for types—never mix inline `type` imports with value imports in the same `import` declaration.
 - **Step-by-step execution:** Break work into small, independently verifiable steps:
   1. **Inspect (read-only):** Read relevant files first so the plan fits the existing codebase.
   2. **Plan & teach:** Present a short plan for the current step, explain the key concepts/trade-offs, highlight any decisions for the user, and **stop for explicit confirmation before creating or modifying any files, installing packages, or resetting/destroying local database state (`db:reset`, `db:seed`)**.

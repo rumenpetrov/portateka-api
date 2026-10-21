@@ -1,6 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import type { z } from "zod";
-import { ValidationApiError, type Resource } from "../helpers/errors";
+import { ValidationApiError } from "../helpers/errors";
+import type { Resource } from "../helpers/errors";
 
 const formatIssues = (issues: z.core.$ZodIssue[]) => {
   const params: Record<string, string> = {};

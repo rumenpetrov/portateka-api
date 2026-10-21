@@ -42,90 +42,50 @@ export const verifyToken = async (
   };
 };
 
-export interface EmailVerificationPayload {
+export interface PurposeTokenPayload {
   sub: string;
   email: string;
   pwdHashSlice: string;
 }
 
-export const generateEmailVerificationToken = (
-  payload: EmailVerificationPayload,
-  secret: string,
-) =>
-  new SignJWT({
-    email: payload.email,
-    pwdHashSlice: payload.pwdHashSlice,
-    purpose: "email_verification",
-  })
-    .setProtectedHeader({ alg: "HS256" })
-    .setSubject(payload.sub)
-    .setIssuedAt()
-    .setExpirationTime(SYSTEM_CONFIG.emailVerificationExpiresIn)
-    .sign(encodeSecret(secret));
-
-export const verifyEmailVerificationToken = async (
-  token: string,
-  secret: string,
-): Promise<EmailVerificationPayload> => {
-  const { payload } = await jwtVerify(token, encodeSecret(secret), {
-    algorithms: ["HS256"],
-  });
-
-  if (
-    payload.purpose !== "email_verification" ||
-    typeof payload.sub !== "string" ||
-    typeof payload.email !== "string" ||
-    typeof payload.pwdHashSlice !== "string"
-  ) {
-    throw new Error("Invalid email verification token");
-  }
-
-  return {
-    sub: payload.sub,
-    email: payload.email,
-    pwdHashSlice: payload.pwdHashSlice,
-  };
-};
-
-export interface PasswordResetPayload {
-  sub: string;
-  email: string;
-  pwdHashSlice: string;
-}
+type TokenPurpose = "email_verification" | "password_reset";
 
 export const getPasswordHashSlice = (passwordHash: string) =>
   passwordHash.slice(-16);
 
-export const generatePasswordResetToken = (
-  payload: PasswordResetPayload,
+const generatePurposeToken = (
+  payload: PurposeTokenPayload,
   secret: string,
+  purpose: TokenPurpose,
+  expiresIn: string,
 ) =>
   new SignJWT({
     email: payload.email,
     pwdHashSlice: payload.pwdHashSlice,
-    purpose: "password_reset",
+    purpose,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(payload.sub)
     .setIssuedAt()
-    .setExpirationTime(SYSTEM_CONFIG.passwordResetExpiresIn)
+    .setExpirationTime(expiresIn)
     .sign(encodeSecret(secret));
 
-export const verifyPasswordResetToken = async (
+const verifyPurposeToken = async (
   token: string,
   secret: string,
-): Promise<PasswordResetPayload> => {
+  expectedPurpose: TokenPurpose,
+): Promise<PurposeTokenPayload> => {
   const { payload } = await jwtVerify(token, encodeSecret(secret), {
     algorithms: ["HS256"],
   });
 
   if (
-    payload.purpose !== "password_reset" ||
+    payload.purpose !== expectedPurpose ||
     typeof payload.sub !== "string" ||
     typeof payload.email !== "string" ||
     typeof payload.pwdHashSlice !== "string"
   ) {
-    throw new Error("Invalid password reset token");
+    throw new Error(`Invalid ${expectedPurpose} token`);
   }
 
   return {
@@ -134,3 +94,37 @@ export const verifyPasswordResetToken = async (
     pwdHashSlice: payload.pwdHashSlice,
   };
 };
+
+export const generateEmailVerificationToken = (
+  payload: PurposeTokenPayload,
+  secret: string,
+) =>
+  generatePurposeToken(
+    payload,
+    secret,
+    "email_verification",
+    SYSTEM_CONFIG.emailVerificationExpiresIn,
+  );
+
+export const verifyEmailVerificationToken = (
+  token: string,
+  secret: string,
+): Promise<PurposeTokenPayload> =>
+  verifyPurposeToken(token, secret, "email_verification");
+
+export const generatePasswordResetToken = (
+  payload: PurposeTokenPayload,
+  secret: string,
+) =>
+  generatePurposeToken(
+    payload,
+    secret,
+    "password_reset",
+    SYSTEM_CONFIG.passwordResetExpiresIn,
+  );
+
+export const verifyPasswordResetToken = (
+  token: string,
+  secret: string,
+): Promise<PurposeTokenPayload> =>
+  verifyPurposeToken(token, secret, "password_reset");
