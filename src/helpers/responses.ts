@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import { ERROR_STATUS_MAP, type ErrorCode, type Resource } from "./errors";
+import { ERROR_STATUS_MAP } from "./errors";
+import type { ErrorCode, Resource } from "./errors";
 
 export type SuccessResponse<
   T extends Record<string, unknown> | unknown[],

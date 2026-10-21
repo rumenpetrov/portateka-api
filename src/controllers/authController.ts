@@ -17,6 +17,7 @@ import {
   verifyEmailVerificationToken,
   verifyPasswordResetToken,
 } from "../utils/jwt";
+import type { PurposeTokenPayload } from "../utils/jwt";
 import {
   sendPasswordResetEmail,
   sendVerificationEmail,
@@ -210,7 +211,7 @@ export const verifyEmail = async (c: VerifyEmailContext) => {
   const { token } = c.req.valid("json");
   const db = getDb(c.env.DATABASE_URL);
 
-  let payload: { sub: string; email: string; pwdHashSlice: string };
+  let payload: PurposeTokenPayload;
   try {
     payload = await verifyEmailVerificationToken(token, c.env.JWT_SECRET);
   } catch {
@@ -303,7 +304,7 @@ export const resetPassword = async (c: ResetPasswordContext) => {
   const { token, password } = c.req.valid("json");
   const db = getDb(c.env.DATABASE_URL);
 
-  let payload: { sub: string; email: string; pwdHashSlice: string };
+  let payload: PurposeTokenPayload;
   try {
     payload = await verifyPasswordResetToken(token, c.env.JWT_SECRET);
   } catch {
