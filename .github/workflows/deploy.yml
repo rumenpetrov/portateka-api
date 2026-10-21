@@ -17,6 +17,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     name: Deploy
+    environment:
+      name: production
+      url: https://portateka-api.rpetrov.dev
     steps:
       - uses: actions/checkout@v6
 

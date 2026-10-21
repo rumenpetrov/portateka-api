@@ -8,14 +8,13 @@ on:
         required: false
         default: false
 
-concurrency:
-  group: test-db-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   build:
     runs-on: ubuntu-latest
     name: Build
+    concurrency:
+      group: test-db
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v6
 
