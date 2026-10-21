@@ -1,5 +1,6 @@
 /// <reference types="node" />
 import "dotenv/config";
+import { eq } from "drizzle-orm";
 import { confirmDestructiveDatabaseAction, getDb } from "./index.ts";
 import { properties, users } from "./schema.ts";
 import { hashPassword } from "../utils/password.ts";
@@ -42,27 +43,37 @@ async function seed() {
       .returning();
 
     console.log("Creating demo properties...");
-    await db.insert(properties).values([
-      {
-        userId: john!.id,
-        name: "Varna Briz",
-        description: "Two-bedroom apartment near the Sea Garden",
-        notes: "Electricity meter is in the hallway cabinet",
-        preferred: true,
-      },
-      {
-        userId: john!.id,
-        name: "Sofia Center",
-        description: "Studio apartment downtown",
-        preferred: false,
-      },
-      {
-        userId: jane!.id,
-        name: "Plovdiv Kapana",
-        description: "Loft in the arts district",
-        preferred: true,
-      },
-    ]);
+    const [varnaBriz, , plovdivKapana] = await db
+      .insert(properties)
+      .values([
+        {
+          userId: john!.id,
+          name: "Varna Briz",
+          description: "Two-bedroom apartment near the Sea Garden",
+          notes: "Electricity meter is in the hallway cabinet",
+        },
+        {
+          userId: john!.id,
+          name: "Sofia Center",
+          description: "Studio apartment downtown",
+        },
+        {
+          userId: jane!.id,
+          name: "Plovdiv Kapana",
+          description: "Loft in the arts district",
+        },
+      ])
+      .returning();
+
+    await db
+      .update(users)
+      .set({ preferredPropertyId: varnaBriz!.id })
+      .where(eq(users.id, john!.id));
+
+    await db
+      .update(users)
+      .set({ preferredPropertyId: plovdivKapana!.id })
+      .where(eq(users.id, jane!.id));
 
     console.log("✅ Database seeded successfully!");
     console.log("\n🔑 Demo Login Credentials:");

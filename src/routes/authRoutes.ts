@@ -5,6 +5,7 @@ import {
   resetPassword,
   signInEmail,
   signUpEmail,
+  updateMe,
   verifyEmail,
 } from "../controllers/authController";
 import { requireAuth } from "../middleware/auth";
@@ -13,6 +14,7 @@ import {
   resetPasswordSchema,
   signInEmailSchema,
   signUpEmailSchema,
+  updateMeSchema,
   validateJson,
   verifyEmailSchema,
 } from "../validators/authValidators";
@@ -46,5 +48,6 @@ app.post(
   resetPassword,
 );
 app.get("/me", requireAuth, me);
+app.patch("/me", requireAuth, validateJson(updateMeSchema, "user"), updateMe);
 
 export default app;

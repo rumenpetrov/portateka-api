@@ -44,104 +44,56 @@ describe("Properties Endpoints", () => {
   });
 
   describe("POST /api/properties", () => {
-    it("should create a user's first property as preferred=true automatically", async () => {
+    it("should create a property and set it as preferredPropertyId when user has none, keeping it on subsequent creations", async () => {
       const { user, token } = await createTestUser();
 
-      const response = await authRequest("/api/properties", token, {
+      const firstRes = await authRequest("/api/properties", token, {
         method: "POST",
         body: JSON.stringify({
           name: "Varna Briz",
           description: "Sea view apartment",
           notes: "Meter in hallway",
-          preferred: false, // Even if false is sent, first property is forced to true
         }),
       });
-      const body = await response.json();
+      const firstBody = (await firstRes.json()) as {
+        data: { id: string };
+      };
 
-      expect(response.status).toBe(201);
-      expect(body).toEqual({
+      expect(firstRes.status).toBe(201);
+      expect(firstBody).toEqual({
         data: {
           id: expect.any(String),
           userId: user.id,
           name: "Varna Briz",
           description: "Sea view apartment",
           notes: "Meter in hallway",
-          preferred: true,
           createdAt: expect.any(String),
           updatedAt: expect.any(String),
         },
       });
-    });
 
-    it("should default subsequent properties to preferred=false and switch preferred when preferred=true is passed", async () => {
-      const { user, token } = await createTestUser();
-      const first = await createTestProperty(user.id, {
-        name: "First Property",
-        preferred: true,
-      });
+      const meAfterFirstRes = await authRequest("/api/auth/me", token);
+      const meAfterFirstBody = (await meAfterFirstRes.json()) as {
+        data: { preferredPropertyId: string | null };
+      };
+      expect(meAfterFirstBody.data.preferredPropertyId).toBe(firstBody.data.id);
 
-      // Second property without `preferred` -> defaults to false
+      // Creating a second property should not overwrite existing preferredPropertyId
       const secondRes = await authRequest("/api/properties", token, {
         method: "POST",
-        body: JSON.stringify({ name: "Second Property" }),
+        body: JSON.stringify({
+          name: "Sofia Center",
+        }),
       });
-      const secondBody = (await secondRes.json()) as {
-        data: { id: string; preferred: boolean };
-      };
-
       expect(secondRes.status).toBe(201);
-      expect(secondBody.data.preferred).toBe(false);
 
-      // Third property with `preferred: true` -> unsets first property
-      const thirdRes = await authRequest("/api/properties", token, {
-        method: "POST",
-        body: JSON.stringify({ name: "Third Property", preferred: true }),
-      });
-      const thirdBody = (await thirdRes.json()) as {
-        data: { id: string; preferred: boolean };
+      const meAfterSecondRes = await authRequest("/api/auth/me", token);
+      const meAfterSecondBody = (await meAfterSecondRes.json()) as {
+        data: { preferredPropertyId: string | null };
       };
-
-      expect(thirdRes.status).toBe(201);
-      expect(thirdBody.data.preferred).toBe(true);
-
-      // Verify first property is now preferred=false
-      const firstCheckRes = await authRequest(
-        `/api/properties/${first.id}`,
-        token,
+      expect(meAfterSecondBody.data.preferredPropertyId).toBe(
+        firstBody.data.id,
       );
-      const firstCheckBody = (await firstCheckRes.json()) as {
-        data: { preferred: boolean };
-      };
-      expect(firstCheckBody.data.preferred).toBe(false);
-    });
-
-    it("should atomically switch preferred property on concurrent preferred=true creations", async () => {
-      const { user, token } = await createTestUser();
-      await createTestProperty(user.id, {
-        name: "Initial Preferred",
-        preferred: true,
-      });
-
-      const [resA, resB] = await Promise.all([
-        authRequest("/api/properties", token, {
-          method: "POST",
-          body: JSON.stringify({ name: "Concurrent A", preferred: true }),
-        }),
-        authRequest("/api/properties", token, {
-          method: "POST",
-          body: JSON.stringify({ name: "Concurrent B", preferred: true }),
-        }),
-      ]);
-
-      expect(resA.status).toBe(201);
-      expect(resB.status).toBe(201);
-
-      const listRes = await authRequest("/api/properties", token);
-      const listBody = (await listRes.json()) as {
-        data: Array<{ preferred: boolean }>;
-      };
-      const preferredCount = listBody.data.filter((p) => p.preferred).length;
-      expect(preferredCount).toBe(1);
     });
 
     it("should return 422 when name is missing", async () => {
@@ -183,32 +135,29 @@ describe("Properties Endpoints", () => {
   });
 
   describe("GET /api/properties", () => {
-    it("should return only the authenticated user's properties with preferred first", async () => {
+    it("should return only the authenticated user's properties ordered by newest first", async () => {
       const { user: user1, token: token1 } = await createTestUser();
       const { user: user2 } = await createTestUser();
 
       await createTestProperty(user1.id, {
-        name: "Non-preferred",
-        preferred: false,
+        name: "First Property",
       });
       await createTestProperty(user1.id, {
-        name: "Preferred",
-        preferred: true,
+        name: "Second Property",
       });
       await createTestProperty(user2.id, {
         name: "Other User Property",
-        preferred: true,
       });
 
       const response = await authRequest("/api/properties", token1);
       const body = (await response.json()) as {
-        data: Array<{ name: string; preferred: boolean }>;
+        data: Array<{ name: string }>;
       };
 
       expect(response.status).toBe(200);
       expect(body.data).toHaveLength(2);
-      expect(body.data[0]?.name).toBe("Preferred");
-      expect(body.data[1]?.name).toBe("Non-preferred");
+      expect(body.data[0]?.name).toBe("Second Property");
+      expect(body.data[1]?.name).toBe("First Property");
     });
   });
 
@@ -217,7 +166,6 @@ describe("Properties Endpoints", () => {
       const { user, token } = await createTestUser();
       const property = await createTestProperty(user.id, {
         name: "My Property",
-        preferred: true,
       });
 
       const response = await authRequest(
@@ -234,7 +182,6 @@ describe("Properties Endpoints", () => {
           name: "My Property",
           description: "Test description",
           notes: null,
-          preferred: true,
           createdAt: expect.any(String),
           updatedAt: expect.any(String),
         },
@@ -244,9 +191,7 @@ describe("Properties Endpoints", () => {
     it("should return 404 when accessing another user's property", async () => {
       const { token: token1 } = await createTestUser();
       const { user: user2 } = await createTestUser();
-      const otherProperty = await createTestProperty(user2.id, {
-        preferred: true,
-      });
+      const otherProperty = await createTestProperty(user2.id);
 
       const response = await authRequest(
         `/api/properties/${otherProperty.id}`,
@@ -278,75 +223,65 @@ describe("Properties Endpoints", () => {
   });
 
   describe("PATCH /api/properties/:id", () => {
-    it("should prevent unsetting preferred=false when user has only 1 property", async () => {
+    it("should update the property fields", async () => {
       const { user, token } = await createTestUser();
-      const onlyProperty = await createTestProperty(user.id, {
-        name: "Only Property",
-        preferred: true,
+      const property = await createTestProperty(user.id, {
+        name: "Original Name",
       });
 
       const response = await authRequest(
-        `/api/properties/${onlyProperty.id}`,
+        `/api/properties/${property.id}`,
         token,
         {
           method: "PATCH",
-          body: JSON.stringify({ preferred: false }),
+          body: JSON.stringify({
+            name: "Updated Name",
+            description: "Updated description",
+          }),
+        },
+      );
+      const body = (await response.json()) as {
+        data: { name: string; description: string | null };
+      };
+
+      expect(response.status).toBe(200);
+      expect(body.data.name).toBe("Updated Name");
+      expect(body.data.description).toBe("Updated description");
+    });
+
+    it("should return 404 when updating another user's property", async () => {
+      const { token: token1 } = await createTestUser();
+      const { user: user2 } = await createTestUser();
+      const otherProperty = await createTestProperty(user2.id);
+
+      const response = await authRequest(
+        `/api/properties/${otherProperty.id}`,
+        token1,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ name: "Hijacked" }),
         },
       );
       const body = await response.json();
 
-      expect(response.status).toBe(422);
+      expect(response.status).toBe(404);
       expect(body).toEqual({
-        code: "VALIDATION_ERROR",
+        code: "NOT_FOUND",
         resource: "property",
-        params: {
-          preferred: "cannot_unset_only_property",
-        },
+        params: { id: otherProperty.id },
       });
-    });
-
-    it("should switch preferred property and unset the previous one", async () => {
-      const { user, token } = await createTestUser();
-      const first = await createTestProperty(user.id, {
-        name: "First",
-        preferred: true,
-      });
-      const second = await createTestProperty(user.id, {
-        name: "Second",
-        preferred: false,
-      });
-
-      const response = await authRequest(
-        `/api/properties/${second.id}`,
-        token,
-        {
-          method: "PATCH",
-          body: JSON.stringify({ name: "Second Updated", preferred: true }),
-        },
-      );
-      const body = (await response.json()) as {
-        data: { name: string; preferred: boolean };
-      };
-
-      expect(response.status).toBe(200);
-      expect(body.data.name).toBe("Second Updated");
-      expect(body.data.preferred).toBe(true);
-
-      const firstCheckRes = await authRequest(
-        `/api/properties/${first.id}`,
-        token,
-      );
-      const firstCheckBody = (await firstCheckRes.json()) as {
-        data: { preferred: boolean };
-      };
-      expect(firstCheckBody.data.preferred).toBe(false);
     });
   });
 
   describe("DELETE /api/properties/:id", () => {
-    it("should delete the user's property and return 204", async () => {
+    it("should delete the user's property, return 204, and clear preferredPropertyId if it was preferred", async () => {
       const { user, token } = await createTestUser();
-      const property = await createTestProperty(user.id, { preferred: true });
+      const property = await createTestProperty(user.id);
+
+      await authRequest("/api/auth/me", token, {
+        method: "PATCH",
+        body: JSON.stringify({ preferredPropertyId: property.id }),
+      });
 
       const response = await authRequest(
         `/api/properties/${property.id}`,
@@ -361,6 +296,12 @@ describe("Properties Endpoints", () => {
         token,
       );
       expect(getRes.status).toBe(404);
+
+      const meRes = await authRequest("/api/auth/me", token);
+      const meBody = (await meRes.json()) as {
+        data: { preferredPropertyId: string | null };
+      };
+      expect(meBody.data.preferredPropertyId).toBeNull();
     });
   });
 });

@@ -74,7 +74,6 @@ export async function createTestProperty(
     name: string;
     description: string | null;
     notes: string | null;
-    preferred: boolean;
   }> = {},
 ) {
   const [property] = await testDb
@@ -84,7 +83,6 @@ export async function createTestProperty(
       name: propertyData.name ?? `Test Property ${Date.now()}`,
       description: propertyData.description ?? "Test description",
       notes: propertyData.notes ?? null,
-      preferred: propertyData.preferred ?? false,
     })
     .returning();
 

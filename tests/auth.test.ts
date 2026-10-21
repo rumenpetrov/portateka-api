@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import app from "../src/index.ts";
 import {
   cleanupDatabase,
+  createTestProperty,
   createTestUser,
   testDb,
   testEnv,
@@ -192,6 +193,7 @@ describe("Authentication Endpoints", () => {
           firstName: user.firstName,
           lastName: user.lastName,
           emailVerified: true,
+          preferredPropertyId: null,
           createdAt: expect.any(String),
           updatedAt: expect.any(String),
         },
@@ -270,6 +272,7 @@ describe("Authentication Endpoints", () => {
             firstName: user.firstName,
             lastName: user.lastName,
             emailVerified: true,
+            preferredPropertyId: null,
           },
         },
       });
@@ -383,6 +386,7 @@ describe("Authentication Endpoints", () => {
           firstName: user.firstName,
           lastName: user.lastName,
           emailVerified: true,
+          preferredPropertyId: null,
           createdAt: expect.any(String),
           updatedAt: expect.any(String),
         },
@@ -416,6 +420,150 @@ describe("Authentication Endpoints", () => {
       expect(body).toEqual({
         code: "UNAUTHORIZED",
         resource: "user",
+      });
+    });
+  });
+
+  describe("PATCH /api/auth/me", () => {
+    it("should update firstName and lastName (including clearing lastName to null)", async () => {
+      const { token } = await createTestUser({
+        firstName: "InitialFirst",
+        lastName: "InitialLast",
+      });
+
+      const updateRes = await app.request(
+        "/api/auth/me",
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            firstName: "UpdatedFirst",
+            lastName: null,
+          }),
+        },
+        testEnv,
+      );
+      const updateBody = (await updateRes.json()) as {
+        data: { firstName: string; lastName: string | null };
+      };
+
+      expect(updateRes.status).toBe(200);
+      expect(updateBody.data.firstName).toBe("UpdatedFirst");
+      expect(updateBody.data.lastName).toBeNull();
+    });
+
+    it("should set, switch, and clear preferredPropertyId", async () => {
+      const { user, token } = await createTestUser();
+      const propA = await createTestProperty(user.id, { name: "Prop A" });
+      const propB = await createTestProperty(user.id, { name: "Prop B" });
+
+      const setRes = await app.request(
+        "/api/auth/me",
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ preferredPropertyId: propA.id }),
+        },
+        testEnv,
+      );
+      const setBody = (await setRes.json()) as {
+        data: { preferredPropertyId: string | null };
+      };
+      expect(setRes.status).toBe(200);
+      expect(setBody.data.preferredPropertyId).toBe(propA.id);
+
+      const switchRes = await app.request(
+        "/api/auth/me",
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ preferredPropertyId: propB.id }),
+        },
+        testEnv,
+      );
+      const switchBody = (await switchRes.json()) as {
+        data: { preferredPropertyId: string | null };
+      };
+      expect(switchRes.status).toBe(200);
+      expect(switchBody.data.preferredPropertyId).toBe(propB.id);
+
+      const clearRes = await app.request(
+        "/api/auth/me",
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ preferredPropertyId: null }),
+        },
+        testEnv,
+      );
+      const clearBody = (await clearRes.json()) as {
+        data: { preferredPropertyId: string | null };
+      };
+      expect(clearRes.status).toBe(200);
+      expect(clearBody.data.preferredPropertyId).toBeNull();
+    });
+
+    it("should return 404 when setting preferredPropertyId to another user's property", async () => {
+      const { token } = await createTestUser();
+      const { user: otherUser } = await createTestUser();
+      const otherProp = await createTestProperty(otherUser.id);
+
+      const response = await app.request(
+        "/api/auth/me",
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ preferredPropertyId: otherProp.id }),
+        },
+        testEnv,
+      );
+      const body = await response.json();
+
+      expect(response.status).toBe(404);
+      expect(body).toEqual({
+        code: "NOT_FOUND",
+        resource: "property",
+        params: { id: otherProp.id },
+      });
+    });
+
+    it("should return 422 when preferredPropertyId is an invalid UUID", async () => {
+      const { token } = await createTestUser();
+
+      const response = await app.request(
+        "/api/auth/me",
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ preferredPropertyId: "not-a-uuid" }),
+        },
+        testEnv,
+      );
+      const body = await response.json();
+
+      expect(response.status).toBe(422);
+      expect(body).toEqual({
+        code: "VALIDATION_ERROR",
+        resource: "user",
+        params: { preferredPropertyId: "invalid_uuid" },
       });
     });
   });

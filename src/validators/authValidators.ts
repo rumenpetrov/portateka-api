@@ -63,5 +63,26 @@ export const resetPasswordSchema = z.object({
   password: passwordFieldSchema,
 });
 
+export const updateMeSchema = z.object({
+  firstName: z
+    .string({ error: "invalid_type" })
+    .trim()
+    .min(1, "required")
+    .max(50, "too_long")
+    .optional(),
+  lastName: z
+    .string({ error: "invalid_type" })
+    .trim()
+    .min(1, "required")
+    .max(50, "too_long")
+    .nullable()
+    .optional(),
+  preferredPropertyId: z
+    .string({ error: "invalid_type" })
+    .pipe(z.uuid("invalid_uuid"))
+    .nullable()
+    .optional(),
+});
+
 
 
