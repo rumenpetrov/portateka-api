@@ -85,20 +85,23 @@ Defined in [`src/validators/authValidators.ts`](../src/validators/authValidators
 | `email`              | `too_long`                    | `422 VALIDATION_ERROR` | Exceeds `255` characters (`sign-up/email`, `sign-in/email`, `forgot-password`).                               |
 | `email`              | `invalid_email`               | `422 VALIDATION_ERROR` | Fails email format validation (`sign-up/email`, `sign-in/email`, `forgot-password`).                          |
 | `email`              | `email_not_verified`          |    `403 FORBIDDEN`     | User credentials are valid, but `emailVerified` is `false` (`sign-in/email`).                                 |
-| `firstName`          | `required`                    | `422 VALIDATION_ERROR` | Missing, not a string, or empty after `.trim()` (`sign-up/email`).                                            |
-| `firstName`          | `too_long`                    | `422 VALIDATION_ERROR` | Exceeds `50` characters (`sign-up/email`).                                                                    |
-| `lastName`           | `invalid_type`                | `422 VALIDATION_ERROR` | Provided as a non-string value (`sign-up/email`).                                                             |
-| `lastName`           | `required`                    | `422 VALIDATION_ERROR` | Provided as an empty/whitespace-only string (`sign-up/email`).                                                |
-| `lastName`           | `too_long`                    | `422 VALIDATION_ERROR` | Exceeds `50` characters (`sign-up/email`).                                                                    |
-| `password`           | `required`                    | `422 VALIDATION_ERROR` | Missing or empty (`sign-up/email`, `sign-in/email`, `reset-password`).                                        |
-| `password`           | `password_too_short`          | `422 VALIDATION_ERROR` | Fewer than `8` characters (`sign-up/email`, `reset-password`).                                                |
-| `password`           | `password_too_long`           | `422 VALIDATION_ERROR` | Exceeds `128` characters (`sign-up/email`, `sign-in/email`, `reset-password`).                                |
-| `password`           | `password_missing_uppercase`  | `422 VALIDATION_ERROR` | Does not contain at least one uppercase letter `[A-Z]` (`sign-up/email`, `reset-password`).                   |
-| `password`           | `password_missing_lowercase`  | `422 VALIDATION_ERROR` | Does not contain at least one lowercase letter `[a-z]` (`sign-up/email`, `reset-password`).                   |
-| `password`           | `password_missing_number`     | `422 VALIDATION_ERROR` | Does not contain at least one digit `\d` (`sign-up/email`, `reset-password`).                                 |
-| `password`           | `password_missing_special`    | `422 VALIDATION_ERROR` | Does not contain at least one special character `[^A-Za-z0-9]` (`sign-up/email`, `reset-password`).           |
-| `token`              | `required`                    | `422 VALIDATION_ERROR` | Missing, not a string, or empty after `.trim()` (`verify-email`, `reset-password`).                           |
-| `token`              | `invalid_or_expired_token`    | `422 VALIDATION_ERROR` | Token JWT signature is invalid, expired, already used, or wrong `purpose` (`verify-email`, `reset-password`). |
+| `firstName`           | `required`                    | `422 VALIDATION_ERROR` | Missing on sign-up, not a string on sign-up, or empty after `.trim()` (`sign-up/email`, `PATCH /api/auth/me`). |
+| `firstName`           | `invalid_type`                | `422 VALIDATION_ERROR` | Provided as a non-string value (`PATCH /api/auth/me`).                                                        |
+| `firstName`           | `too_long`                    | `422 VALIDATION_ERROR` | Exceeds `50` characters (`sign-up/email`, `PATCH /api/auth/me`).                                              |
+| `lastName`            | `invalid_type`                | `422 VALIDATION_ERROR` | Provided as a non-string value (`sign-up/email`, `PATCH /api/auth/me`).                                       |
+| `lastName`            | `required`                    | `422 VALIDATION_ERROR` | Provided as an empty/whitespace-only string (`sign-up/email`, `PATCH /api/auth/me`).                          |
+| `lastName`            | `too_long`                    | `422 VALIDATION_ERROR` | Exceeds `50` characters (`sign-up/email`, `PATCH /api/auth/me`).                                              |
+| `password`            | `required`                    | `422 VALIDATION_ERROR` | Missing or empty (`sign-up/email`, `sign-in/email`, `reset-password`).                                        |
+| `password`            | `password_too_short`          | `422 VALIDATION_ERROR` | Fewer than `8` characters (`sign-up/email`, `reset-password`).                                                |
+| `password`            | `password_too_long`           | `422 VALIDATION_ERROR` | Exceeds `128` characters (`sign-up/email`, `sign-in/email`, `reset-password`).                                |
+| `password`            | `password_missing_uppercase`  | `422 VALIDATION_ERROR` | Does not contain at least one uppercase letter `[A-Z]` (`sign-up/email`, `reset-password`).                   |
+| `password`            | `password_missing_lowercase`  | `422 VALIDATION_ERROR` | Does not contain at least one lowercase letter `[a-z]` (`sign-up/email`, `reset-password`).                   |
+| `password`            | `password_missing_number`     | `422 VALIDATION_ERROR` | Does not contain at least one digit `\d` (`sign-up/email`, `reset-password`).                                 |
+| `password`            | `password_missing_special`    | `422 VALIDATION_ERROR` | Does not contain at least one special character `[^A-Za-z0-9]` (`sign-up/email`, `reset-password`).           |
+| `token`               | `required`                    | `422 VALIDATION_ERROR` | Missing, not a string, or empty after `.trim()` (`verify-email`, `reset-password`).                           |
+| `token`               | `invalid_or_expired_token`    | `422 VALIDATION_ERROR` | Token JWT signature is invalid, expired, already used, or wrong `purpose` (`verify-email`, `reset-password`). |
+| `preferredPropertyId` | `invalid_type`                | `422 VALIDATION_ERROR` | Provided and is neither a string nor `null` (`PATCH /api/auth/me`).                                           |
+| `preferredPropertyId` | `invalid_uuid`                | `422 VALIDATION_ERROR` | Provided as a string that is not a valid UUID (`PATCH /api/auth/me`).                                         |
 
 ---
 
@@ -106,17 +109,15 @@ Defined in [`src/validators/authValidators.ts`](../src/validators/authValidators
 
 Defined in [`src/validators/propertyValidators.ts`](../src/validators/propertyValidators.ts) and [`src/controllers/propertyController.ts`](../src/controllers/propertyController.ts):
 
-| Field (`params` key) | Machine Code (`params` value) |  HTTP Status / `code`  | Trigger Rule                                                                           |
-| :------------------- | :---------------------------- | :--------------------: | :------------------------------------------------------------------------------------- |
-| `id` _(route param)_ | `invalid_uuid`                | `422 VALIDATION_ERROR` | `:id` URL parameter is not a valid UUID (`GET /:id`, `PATCH /:id`, `DELETE /:id`).     |
-| `name`               | `required`                    | `422 VALIDATION_ERROR` | Missing on `POST`, not a string, or empty after `.trim()` (`POST`, `PATCH`).           |
-| `name`               | `too_long`                    | `422 VALIDATION_ERROR` | Exceeds `100` characters (`POST`, `PATCH`).                                            |
-| `description`        | `invalid_type`                | `422 VALIDATION_ERROR` | Provided and is neither a string nor `null` (`POST`, `PATCH`).                         |
-| `description`        | `too_long`                    | `422 VALIDATION_ERROR` | Exceeds `1000` characters (`POST`, `PATCH`).                                           |
-| `notes`              | `invalid_type`                | `422 VALIDATION_ERROR` | Provided and is neither a string nor `null` (`POST`, `PATCH`).                         |
-| `notes`              | `too_long`                    | `422 VALIDATION_ERROR` | Exceeds `2000` characters (`POST`, `PATCH`).                                           |
-| `preferred`          | `invalid_type`                | `422 VALIDATION_ERROR` | Provided and is not a boolean (`POST`, `PATCH`).                                       |
-| `preferred`          | `cannot_unset_only_property`  | `422 VALIDATION_ERROR` | Attempting to `PATCH` `preferred: false` when the user has only `1` property in total. |
+| Field (`params` key) | Machine Code (`params` value) |  HTTP Status / `code`  | Trigger Rule                                                                       |
+| :------------------- | :---------------------------- | :--------------------: | :--------------------------------------------------------------------------------- |
+| `id` _(route param)_ | `invalid_uuid`                | `422 VALIDATION_ERROR` | `:id` URL parameter is not a valid UUID (`GET /:id`, `PATCH /:id`, `DELETE /:id`). |
+| `name`               | `required`                    | `422 VALIDATION_ERROR` | Missing on `POST`, not a string, or empty after `.trim()` (`POST`, `PATCH`).       |
+| `name`               | `too_long`                    | `422 VALIDATION_ERROR` | Exceeds `100` characters (`POST`, `PATCH`).                                        |
+| `description`        | `invalid_type`                | `422 VALIDATION_ERROR` | Provided and is neither a string nor `null` (`POST`, `PATCH`).                     |
+| `description`        | `too_long`                    | `422 VALIDATION_ERROR` | Exceeds `1000` characters (`POST`, `PATCH`).                                       |
+| `notes`              | `invalid_type`                | `422 VALIDATION_ERROR` | Provided and is neither a string nor `null` (`POST`, `PATCH`).                     |
+| `notes`              | `too_long`                    | `422 VALIDATION_ERROR` | Exceeds `2000` characters (`POST`, `PATCH`).                                       |
 
 ---
 

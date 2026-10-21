@@ -19,19 +19,26 @@
 - **Enumeration-safe forgot-password (`POST /api/auth/forgot-password`):** Always returns `200 OK` with `{ data: { message: "password_reset_email_sent" } }`. If the email exists, sends a reset link (`${WEB_APP_BASE_URL}${WEB_APP_RESET_PASSWORD_PREFIX}?token=...`) with a signed JWT (`purpose: "password_reset"`, valid for `1h`). If the email does not exist, no email is sent and the same response is returned.
 - **Single-use stateless reset token (`POST /api/auth/reset-password`):** The reset JWT embeds a 16-character slice of the user's current password hash (`pwdHashSlice`). When `POST /api/auth/reset-password` updates the user's password hash (and sets `emailVerified = true`), the embedded `pwdHashSlice` no longer matches the new password hash, automatically invalidating the token against reuse without requiring database token storage.
 
+### Profile Updates (`PATCH /api/auth/me`)
+
+- Authenticated users can partially update their profile (`firstName`, `lastName`, `preferredPropertyId`) via `PATCH /api/auth/me`. `lastName` and `preferredPropertyId` can also be set to `null`.
+
 ---
 
-## Properties (`properties`)
+## Properties (`properties`) & Preferred Property (`users.preferredPropertyId`)
 
 ### Ownership & Isolation
 
 - Every property belongs to a single user (`userId` references `users.id` with `ON DELETE CASCADE`).
 - A user can only list, view, create, update, or delete their own properties. Accessing or mutating another user's property returns `404 NOT_FOUND` (`resource: "property"`).
+- `GET /api/properties` returns the authenticated user's properties ordered by `createdAt` descending (newest first).
 
 ### Preferred Property Rules
 
-- **Single preferred property:** A user can have **at most 1** property with `preferred = true` at any time. Enforced at the database level via the partial unique index `properties_user_preferred_idx` on `(user_id) WHERE preferred = true`.
-- **0 preferred properties:** Allowed when the user has 0 properties, when they delete their preferred property, or when they have more than 1 property and explicitly unset `preferred` (`preferred: false`).
-- **First property is always preferred:** When a user has `0` existing properties and creates a new property, `preferred` is automatically set to `true` (regardless of whether `preferred` was omitted or passed as `false`).
-- **Switching preferred property:** When a user creates or updates (`PATCH`) a property with `preferred: true`, any previously preferred property belonging to that user is automatically updated to `preferred: false`.
-- **Unsetting preferred on a single property is disallowed:** If a user has only `1` property in total, they cannot `PATCH` it with `preferred: false` (returns `422 VALIDATION_ERROR` on `property` with `{ preferred: "cannot_unset_only_property" }`). Unsetting `preferred: false` is only allowed when the user has more than 1 property.
+- **Single source of truth on `users`:** Each user has a nullable `preferredPropertyId` column (`users.preferred_property_id`) referencing `properties.id` with `ON DELETE SET NULL`.
+- **At most 1 preferred property:** Because `preferredPropertyId` is a single column on `users`, a user can have at most 1 preferred property at any time without requiring multi-row updates or partial unique indexes on `properties`.
+- **Automatically set when `preferredPropertyId` is `null`:** When a user creates a property (`POST /api/properties`) and their `preferredPropertyId` is currently `null` (e.g., their first property, or after deleting/clearing a previous preferred property), `users.preferredPropertyId` is automatically set to the newly created property's `id`. If the user already has a `preferredPropertyId`, creating additional properties leaves it unchanged.
+- **Setting, switching, or clearing:** Authenticated users update `preferredPropertyId` via `PATCH /api/auth/me` with `{ preferredPropertyId: "<uuid>" | null }`:
+  - Passing a UUID verifies that the property exists and belongs to the authenticated user (returns `404 NOT_FOUND` on `property` if not) and sets `users.preferred_property_id`.
+  - Passing `null` clears the user's preferred property.
+- **Automatic cleanup on property deletion:** If the user deletes the property referenced by `preferredPropertyId` (`DELETE /api/properties/:id`), Postgres automatically sets `users.preferred_property_id` to `NULL` via `ON DELETE SET NULL`.

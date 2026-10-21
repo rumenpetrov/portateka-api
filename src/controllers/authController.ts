@@ -7,7 +7,7 @@ import {
 } from "../helpers/errors";
 import { ok } from "../helpers/responses";
 import { getDb } from "../db";
-import { users } from "../db/schema";
+import { properties, users } from "../db/schema";
 import { hashPassword, verifyPassword } from "../utils/password";
 import {
   generateEmailVerificationToken,
@@ -29,6 +29,7 @@ import type {
   resetPasswordSchema,
   signUpEmailSchema,
   signInEmailSchema,
+  updateMeSchema,
   verifyEmailSchema,
 } from "../validators/authValidators";
 import type { AppEnv } from "../types/env";
@@ -64,6 +65,12 @@ type ResetPasswordContext = Context<
   AppEnv,
   string,
   { in: { json: unknown }; out: { json: z.output<typeof resetPasswordSchema> } }
+>;
+
+type UpdateMeContext = Context<
+  AppEnv,
+  string,
+  { in: { json: unknown }; out: { json: z.output<typeof updateMeSchema> } }
 >;
 
 type AuthContext = Context<AppEnv>;
@@ -168,6 +175,7 @@ export const signInEmail = async (c: SignInEmailContext) => {
       lastName: users.lastName,
       password: users.password,
       emailVerified: users.emailVerified,
+      preferredPropertyId: users.preferredPropertyId,
     })
     .from(users)
     .where(eq(users.email, email))
@@ -203,6 +211,7 @@ export const signInEmail = async (c: SignInEmailContext) => {
       firstName: user.firstName,
       lastName: user.lastName,
       emailVerified: user.emailVerified,
+      preferredPropertyId: user.preferredPropertyId,
     },
   });
 };
@@ -248,6 +257,7 @@ export const verifyEmail = async (c: VerifyEmailContext) => {
       firstName: users.firstName,
       lastName: users.lastName,
       emailVerified: users.emailVerified,
+      preferredPropertyId: users.preferredPropertyId,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
     });
@@ -350,6 +360,7 @@ export const me = async (c: AuthContext) => {
       firstName: users.firstName,
       lastName: users.lastName,
       emailVerified: users.emailVerified,
+      preferredPropertyId: users.preferredPropertyId,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
     })
@@ -362,4 +373,56 @@ export const me = async (c: AuthContext) => {
   }
 
   return ok(c, user);
+};
+
+export const updateMe = async (c: UpdateMeContext) => {
+  const { sub } = c.get("user");
+  const updates = c.req.valid("json");
+  const db = getDb(c.env.DATABASE_URL);
+
+  if (
+    updates.preferredPropertyId !== undefined &&
+    updates.preferredPropertyId !== null
+  ) {
+    const [property] = await db
+      .select({ id: properties.id })
+      .from(properties)
+      .where(
+        and(
+          eq(properties.id, updates.preferredPropertyId),
+          eq(properties.userId, sub),
+        ),
+      )
+      .limit(1);
+
+    if (!property) {
+      throw new NotFoundApiError("property", {
+        id: updates.preferredPropertyId,
+      });
+    }
+  }
+
+  const [updatedUser] = await db
+    .update(users)
+    .set({
+      ...updates,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, sub))
+    .returning({
+      id: users.id,
+      email: users.email,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      emailVerified: users.emailVerified,
+      preferredPropertyId: users.preferredPropertyId,
+      createdAt: users.createdAt,
+      updatedAt: users.updatedAt,
+    });
+
+  if (!updatedUser) {
+    throw new ApiError("UNAUTHORIZED", "user");
+  }
+
+  return ok(c, updatedUser);
 };

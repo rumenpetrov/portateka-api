@@ -22,7 +22,6 @@ export const createPropertySchema = z.object({
     .max(2000, "too_long")
     .nullable()
     .optional(),
-  preferred: z.boolean({ error: "invalid_type" }).optional(),
 });
 
 export const updatePropertySchema = createPropertySchema.partial();

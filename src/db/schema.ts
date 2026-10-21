@@ -5,9 +5,9 @@ import {
   text,
   boolean,
   timestamp,
-  uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { relations, sql } from "drizzle-orm";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -17,6 +17,10 @@ export const users = pgTable("users", {
   // Stores the password hash, never the plain password.
   password: varchar("password", { length: 255 }).notNull(),
   emailVerified: boolean("email_verified").default(false).notNull(),
+  preferredPropertyId: uuid("preferred_property_id").references(
+    (): AnyPgColumn => properties.id,
+    { onDelete: "set null" },
+  ),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -25,33 +29,28 @@ export const users = pgTable("users", {
     .notNull(),
 });
 
-export const properties = pgTable(
-  "properties",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id")
-      .references(() => users.id, { onDelete: "cascade" })
-      .notNull(),
-    name: varchar("name", { length: 100 }).notNull(),
-    description: text("description"),
-    notes: text("notes"),
-    preferred: boolean("preferred").default(false).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-  (table) => [
-    uniqueIndex("properties_user_preferred_idx")
-      .on(table.userId)
-      .where(sql`${table.preferred} = true`),
-  ],
-);
+export const properties = pgTable("properties", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   properties: many(properties),
+  preferredProperty: one(properties, {
+    fields: [users.preferredPropertyId],
+    references: [properties.id],
+  }),
 }));
 
 export const propertiesRelations = relations(properties, ({ one }) => ({
