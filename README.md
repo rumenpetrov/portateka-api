@@ -49,6 +49,7 @@ An API for a real estate portfolio management hub, built with **Hono** on **Clou
 | Command                 | Description                                                                          |
 | ----------------------- | ------------------------------------------------------------------------------------ |
 | `npm run dev`           | Start local Cloudflare Workers dev server (`wrangler dev`)                           |
+| `npm run build`         | Build minified Worker bundle to `dist/` (`wrangler deploy --dry-run --outdir dist --minify`) |
 | `npm run typecheck`     | Run TypeScript compiler check (`tsc --noEmit`)                                       |
 | `npm test`              | Run automated tests once with Vitest (`vitest run`)                                  |
 | `npm run test:watch`    | Run Vitest in watch mode (`vitest`)                                                  |
@@ -124,18 +125,18 @@ There are two separate things to keep in mind:
   ```
 - **Quick terminal query against any DB:**
   ```bash
-  DATABASE_URL="postgresql://..." node -e 'import("@neondatabase/serverless").then(async ({neon}) => console.table(await neon(process.env.DATABASE_URL).query("SELECT id, email, username, created_at FROM users")))'
+  DATABASE_URL="postgresql://..." node -e 'import("@neondatabase/serverless").then(async ({neon}) => console.table(await neon(process.env.DATABASE_URL).query("SELECT id, email, first_name, last_name, email_verified, created_at FROM users")))'
   ```
 
 ---
 
 ## Deployment & Secrets (GitHub Actions)
 
-Production deployments run automatically on push to `main` via [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml):
+Production deployments run automatically on push to `main` via [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) (reusing [`.github/workflows/_build.yml`](.github/workflows/_build.yml)):
 
-1. Runs `npm run typecheck`.
+1. Runs `npm run typecheck`, `npm test`, and `npm run build`.
 2. Runs `npm run db:migrate` against the production `DATABASE_URL`.
-3. Deploys the Worker and syncs production secrets (`DATABASE_URL`, `JWT_SECRET`) from **GitHub Actions Secrets** directly to **Cloudflare Workers**.
+3. Deploys the prebuilt Worker bundle (`dist/index.js --no-bundle`) and syncs production secrets (`DATABASE_URL`, `JWT_SECRET`, `RESEND_API_KEY`) from **GitHub Actions Secrets** directly to **Cloudflare Workers**.
 
 **GitHub Secrets is the single source of truth for production secrets.** When adding a new secret to the app:
 
