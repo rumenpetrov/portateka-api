@@ -1,0 +1,43 @@
+name: _build
+
+on:
+  workflow_call:
+    inputs:
+      upload-artifact:
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: test-db-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js and dependencies
+        uses: ./.github/actions/setup
+
+      - name: Run type check
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+        env:
+          TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      - name: Build Worker bundle
+        run: npm run build
+
+      - name: Upload build artifact
+        if: inputs.upload-artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: worker-bundle
+          path: dist/
+          if-no-files-found: error
