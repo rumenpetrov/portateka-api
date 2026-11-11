@@ -28,6 +28,7 @@
 - **Validation & machine codes:** Validate JSON bodies with `validateJson(schema, resource)` and route params with `validateParams(schema, resource)` (`src/validators/validate.ts`), and read validated output with `c.req.valid("json")` / `c.req.valid("param")`. All field error values in `params` (`Record<string, string>`) must be short machine codes (e.g., `required`, `invalid_email`, `password_too_short`, `already_exists`) so the client handles translations. Keep `docs/ERRORS.md` updated whenever adding or changing error codes, resources, or field machine codes.
 - **Authentication:** Protect routes or routers with `requireAuth` (`src/middleware/auth.ts`) and read the authenticated user payload (`{ sub, email, firstName, lastName }`) via `c.get("user")`.
 - **Domain & Business Rules:** Follow the entity invariants documented in `docs/DOMAIN.md` (and keep `docs/DOMAIN.md` updated when business rules evolve).
+- **Architecture Decision Records (ADRs):** Architectural decisions and trade-offs are documented in `docs/adr/` (`0001`–`0006`). Keep `docs/adr/` updated when introducing or changing architectural patterns.
 
 ## Database & Environment Workflow
 - **Local secrets:** Keep local secrets in `.env` (copied from `.env.example`, loaded by both Wrangler and `drizzle.config.ts` via `dotenv/config`). Keep `.env` as the sole local env file (creating `.dev.vars` would cause Wrangler to ignore `.env`).
