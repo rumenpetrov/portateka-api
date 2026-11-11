@@ -1,9 +1,9 @@
 /// <reference types="node" />
 import "dotenv/config";
-import { getDb } from "../../src/db/index.ts";
-import { properties, users } from "../../src/db/schema.ts";
-import { hashPassword } from "../../src/utils/password.ts";
-import { generateToken } from "../../src/utils/jwt.ts";
+import { getDb } from "@/db/index.ts";
+import { properties, users } from "@/db/schema.ts";
+import { hashPassword } from "@/utils/password.ts";
+import { generateToken } from "@/utils/jwt.ts";
 
 export const testEnv: CloudflareBindings = {
   DATABASE_URL: process.env.TEST_DATABASE_URL!,

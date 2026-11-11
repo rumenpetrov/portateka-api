@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import app from "../src/index.ts";
+import app from "@/index.ts";
 import {
   cleanupDatabase,
   createTestProperty,

@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
-import { SYSTEM_CONFIG } from "../config";
+import { SYSTEM_CONFIG } from "@/config";
 
 export interface JwtPayload {
   sub: string;

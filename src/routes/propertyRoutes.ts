@@ -5,15 +5,15 @@ import {
   getPropertyEntry,
   updatePropertyEntry,
   deletePropertyEntry,
-} from "../controllers/propertyController";
-import { requireAuth } from "../middleware/auth";
+} from "@/controllers/propertyController";
+import { requireAuth } from "@/middleware/auth";
 import {
   createPropertySchema,
   propertyIdParamSchema,
   updatePropertySchema,
-} from "../validators/propertyValidators";
-import { validateJson, validateParams } from "../validators/validate";
-import type { AppEnv } from "../types/env";
+} from "@/validators/propertyValidators";
+import { validateJson, validateParams } from "@/validators/validate";
+import type { AppEnv } from "@/types/env";
 
 const app = new Hono<AppEnv>();
 

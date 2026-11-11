@@ -4,11 +4,11 @@ import {
   InternalServerApiError,
   NotFoundApiError,
   ValidationApiError,
-} from "../helpers/errors";
-import { ok } from "../helpers/responses";
-import { getDb } from "../db";
-import { properties, users } from "../db/schema";
-import { hashPassword, verifyPassword } from "../utils/password";
+} from "@/helpers/errors";
+import { ok } from "@/helpers/responses";
+import { getDb } from "@/db";
+import { properties, users } from "@/db/schema";
+import { hashPassword, verifyPassword } from "@/utils/password";
 import {
   generateEmailVerificationToken,
   generatePasswordResetToken,
@@ -16,12 +16,12 @@ import {
   getPasswordHashSlice,
   verifyEmailVerificationToken,
   verifyPasswordResetToken,
-} from "../utils/jwt";
-import type { PurposeTokenPayload } from "../utils/jwt";
+} from "@/utils/jwt";
+import type { PurposeTokenPayload } from "@/utils/jwt";
 import {
   sendPasswordResetEmail,
   sendVerificationEmail,
-} from "../utils/email";
+} from "@/utils/email";
 import { and, eq } from "drizzle-orm";
 import type { z } from "zod";
 import type {
@@ -31,8 +31,8 @@ import type {
   signInEmailSchema,
   updateMeSchema,
   verifyEmailSchema,
-} from "../validators/authValidators";
-import type { AppEnv } from "../types/env";
+} from "@/validators/authValidators";
+import type { AppEnv } from "@/types/env";
 
 type SignUpEmailContext = Context<
   AppEnv,

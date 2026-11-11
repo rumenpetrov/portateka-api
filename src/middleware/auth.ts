@@ -1,7 +1,7 @@
 import { createMiddleware } from "hono/factory";
-import { ApiError } from "../helpers/errors";
-import { verifyToken } from "../utils/jwt";
-import type { AppEnv } from "../types/env";
+import { ApiError } from "@/helpers/errors";
+import { verifyToken } from "@/utils/jwt";
+import type { AppEnv } from "@/types/env";
 
 export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
   const authHeader = c.req.header("Authorization");

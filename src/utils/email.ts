@@ -1,4 +1,4 @@
-import { SYSTEM_CONFIG } from "../config";
+import { SYSTEM_CONFIG } from "@/config";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 

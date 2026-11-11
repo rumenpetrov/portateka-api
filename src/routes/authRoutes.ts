@@ -7,8 +7,8 @@ import {
   signUpEmail,
   updateMe,
   verifyEmail,
-} from "../controllers/authController";
-import { requireAuth } from "../middleware/auth";
+} from "@/controllers/authController";
+import { requireAuth } from "@/middleware/auth";
 import {
   forgotPasswordSchema,
   resetPasswordSchema,
@@ -17,8 +17,8 @@ import {
   updateMeSchema,
   validateJson,
   verifyEmailSchema,
-} from "../validators/authValidators";
-import type { AppEnv } from "../types/env";
+} from "@/validators/authValidators";
+import type { AppEnv } from "@/types/env";
 
 const app = new Hono<AppEnv>();
 

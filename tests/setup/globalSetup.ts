@@ -1,8 +1,8 @@
 /// <reference types="node" />
 import "dotenv/config";
 import { migrate } from "drizzle-orm/neon-http/migrator";
-import { getDb } from "../../src/db/index.ts";
-import { users } from "../../src/db/schema.ts";
+import { getDb } from "@/db/index.ts";
+import { users } from "@/db/schema.ts";
 
 export default async function setup() {
   const testDbUrl = process.env.TEST_DATABASE_URL;
