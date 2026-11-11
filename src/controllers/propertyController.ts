@@ -1,16 +1,16 @@
 import type { Context } from "hono";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import type { z } from "zod";
-import { NotFoundApiError } from "../helpers/errors";
-import { ok } from "../helpers/responses";
-import { getDb } from "../db";
-import { properties, users } from "../db/schema";
+import { NotFoundApiError } from "@/helpers/errors";
+import { ok } from "@/helpers/responses";
+import { getDb } from "@/db";
+import { properties, users } from "@/db/schema";
 import type {
   createPropertySchema,
   propertyIdParamSchema,
   updatePropertySchema,
-} from "../validators/propertyValidators";
-import type { AppEnv } from "../types/env";
+} from "@/validators/propertyValidators";
+import type { AppEnv } from "@/types/env";
 
 type PropertyContext = Context<AppEnv>;
 

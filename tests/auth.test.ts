@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import app from "../src/index.ts";
+import app from "@/index.ts";
 import {
   cleanupDatabase,
   createTestProperty,
@@ -7,14 +7,14 @@ import {
   testDb,
   testEnv,
 } from "./helpers/dbHelpers.ts";
-import { users } from "../src/db/schema.ts";
+import { users } from "@/db/schema.ts";
 import { eq } from "drizzle-orm";
 import {
   generateEmailVerificationToken,
   generatePasswordResetToken,
   getPasswordHashSlice,
-} from "../src/utils/jwt.ts";
-import * as emailUtils from "../src/utils/email.ts";
+} from "@/utils/jwt.ts";
+import * as emailUtils from "@/utils/email.ts";
 
 const jsonRequest = (path: string, body: unknown, headers?: HeadersInit) =>
   app.request(

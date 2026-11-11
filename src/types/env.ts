@@ -1,4 +1,4 @@
-import type { JwtPayload } from "../utils/jwt";
+import type { JwtPayload } from "@/utils/jwt";
 
 export interface AppVariables {
   user: JwtPayload;
