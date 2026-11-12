@@ -148,7 +148,7 @@ export const signUpEmail = async (c: SignUpEmailContext) => {
   try {
     const verificationToken = await generateEmailVerificationToken(
       {
-        sub: targetUserId,
+        id: targetUserId,
         email,
         pwdHashSlice: getPasswordHashSlice(hashedPassword),
       },
@@ -206,7 +206,7 @@ export const signInEmail = async (c: SignInEmailContext) => {
 
   const token = await generateToken(
     {
-      sub: user.id,
+      id: user.id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
@@ -244,11 +244,11 @@ export const verifyEmail = async (c: VerifyEmailContext) => {
       password: users.password,
     })
     .from(users)
-    .where(and(eq(users.id, payload.sub), eq(users.email, payload.email)))
+    .where(and(eq(users.id, payload.id), eq(users.email, payload.email)))
     .limit(1);
 
   if (!user) {
-    throw new NotFoundApiError("user", { id: payload.sub });
+    throw new NotFoundApiError("user", { id: payload.id });
   }
 
   if (getPasswordHashSlice(user.password) !== payload.pwdHashSlice) {
@@ -298,7 +298,7 @@ export const forgotPassword = async (c: ForgotPasswordContext) => {
   try {
     const resetToken = await generatePasswordResetToken(
       {
-        sub: user.id,
+        id: user.id,
         email: user.email,
         pwdHashSlice: getPasswordHashSlice(user.password),
       },
@@ -339,7 +339,7 @@ export const resetPassword = async (c: ResetPasswordContext) => {
       password: users.password,
     })
     .from(users)
-    .where(and(eq(users.id, payload.sub), eq(users.email, payload.email)))
+    .where(and(eq(users.id, payload.id), eq(users.email, payload.email)))
     .limit(1);
 
   if (!user || getPasswordHashSlice(user.password) !== payload.pwdHashSlice) {
@@ -361,7 +361,7 @@ export const resetPassword = async (c: ResetPasswordContext) => {
 };
 
 export const changePassword = async (c: ChangePasswordContext) => {
-  const { sub } = c.get("user");
+  const { id } = c.get("user");
   const { currentPassword, newPassword } = c.req.valid("json");
   const db = getDb(c.env.DATABASE_URL);
 
@@ -371,7 +371,7 @@ export const changePassword = async (c: ChangePasswordContext) => {
       password: users.password,
     })
     .from(users)
-    .where(eq(users.id, sub))
+    .where(eq(users.id, id))
     .limit(1);
 
   if (!user) {
@@ -400,7 +400,7 @@ export const changePassword = async (c: ChangePasswordContext) => {
 };
 
 export const me = async (c: AuthContext) => {
-  const { sub } = c.get("user");
+  const { id } = c.get("user");
   const db = getDb(c.env.DATABASE_URL);
 
   const [user] = await db
@@ -415,7 +415,7 @@ export const me = async (c: AuthContext) => {
       updatedAt: users.updatedAt,
     })
     .from(users)
-    .where(eq(users.id, sub))
+    .where(eq(users.id, id))
     .limit(1);
 
   if (!user) {
@@ -426,7 +426,7 @@ export const me = async (c: AuthContext) => {
 };
 
 export const updateMe = async (c: UpdateMeContext) => {
-  const { sub } = c.get("user");
+  const { id } = c.get("user");
   const updates = c.req.valid("json");
   const db = getDb(c.env.DATABASE_URL);
 
@@ -440,7 +440,7 @@ export const updateMe = async (c: UpdateMeContext) => {
       .where(
         and(
           eq(properties.id, updates.preferredPropertyId),
-          eq(properties.userId, sub),
+          eq(properties.userId, id),
         ),
       )
       .limit(1);
@@ -458,7 +458,7 @@ export const updateMe = async (c: UpdateMeContext) => {
       ...updates,
       updatedAt: new Date(),
     })
-    .where(eq(users.id, sub))
+    .where(eq(users.id, id))
     .returning({
       id: users.id,
       email: users.email,
@@ -478,12 +478,12 @@ export const updateMe = async (c: UpdateMeContext) => {
 };
 
 export const deleteMe = async (c: AuthContext) => {
-  const { sub } = c.get("user");
+  const { id } = c.get("user");
   const db = getDb(c.env.DATABASE_URL);
 
   const [deletedUser] = await db
     .delete(users)
-    .where(eq(users.id, sub))
+    .where(eq(users.id, id))
     .returning({
       id: users.id,
       email: users.email,

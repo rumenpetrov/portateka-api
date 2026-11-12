@@ -48,7 +48,7 @@ type UpdatePropertyContext = Context<
 >;
 
 export const getPropertyCollection = async (c: PropertyContext) => {
-  const { sub: userId } = c.get("user");
+  const { id: userId } = c.get("user");
   const db = getDb(c.env.DATABASE_URL);
 
   const userProperties = await db
@@ -61,7 +61,7 @@ export const getPropertyCollection = async (c: PropertyContext) => {
 };
 
 export const createPropertyEntry = async (c: CreatePropertyContext) => {
-  const { sub: userId } = c.get("user");
+  const { id: userId } = c.get("user");
   const { name, description, notes } = c.req.valid("json");
   const db = getDb(c.env.DATABASE_URL);
 
@@ -88,7 +88,7 @@ export const createPropertyEntry = async (c: CreatePropertyContext) => {
 };
 
 export const getPropertyEntry = async (c: PropertyParamContext) => {
-  const { sub: userId } = c.get("user");
+  const { id: userId } = c.get("user");
   const { id } = c.req.valid("param");
   const db = getDb(c.env.DATABASE_URL);
 
@@ -106,7 +106,7 @@ export const getPropertyEntry = async (c: PropertyParamContext) => {
 };
 
 export const updatePropertyEntry = async (c: UpdatePropertyContext) => {
-  const { sub: userId } = c.get("user");
+  const { id: userId } = c.get("user");
   const { id } = c.req.valid("param");
   const updates = c.req.valid("json");
   const db = getDb(c.env.DATABASE_URL);
@@ -125,7 +125,7 @@ export const updatePropertyEntry = async (c: UpdatePropertyContext) => {
 };
 
 export const deletePropertyEntry = async (c: PropertyParamContext) => {
-  const { sub: userId } = c.get("user");
+  const { id: userId } = c.get("user");
   const { id } = c.req.valid("param");
   const db = getDb(c.env.DATABASE_URL);
 

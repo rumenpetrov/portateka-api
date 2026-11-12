@@ -173,7 +173,7 @@ describe("Authentication Endpoints", () => {
       const { user } = await createTestUser({ emailVerified: false });
       const verificationToken = await generateEmailVerificationToken(
         {
-          sub: user.id,
+          id: user.id,
           email: user.email,
           pwdHashSlice: getPasswordHashSlice(user.password),
         },
@@ -204,7 +204,7 @@ describe("Authentication Endpoints", () => {
       const { user } = await createTestUser({ emailVerified: false });
       const originalToken = await generateEmailVerificationToken(
         {
-          sub: user.id,
+          id: user.id,
           email: user.email,
           pwdHashSlice: getPasswordHashSlice(user.password),
         },
@@ -610,7 +610,7 @@ describe("Authentication Endpoints", () => {
       const { user } = await createTestUser({ emailVerified: false });
       const resetToken = await generatePasswordResetToken(
         {
-          sub: user.id,
+          id: user.id,
           email: user.email,
           pwdHashSlice: getPasswordHashSlice(user.password),
         },
