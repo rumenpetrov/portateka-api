@@ -2,7 +2,7 @@ import { SignJWT, jwtVerify } from "jose";
 import { SYSTEM_CONFIG } from "@/config";
 
 export interface JwtPayload {
-  sub: string;
+  id: string;
   email: string;
   firstName: string;
   lastName: string | null;
@@ -17,7 +17,7 @@ export const generateToken = (payload: JwtPayload, secret: string) =>
     lastName: payload.lastName,
   })
     .setProtectedHeader({ alg: "HS256" })
-    .setSubject(payload.sub)
+    .setSubject(payload.id)
     .setIssuedAt()
     .setExpirationTime(SYSTEM_CONFIG.jwtExpiresIn)
     .sign(encodeSecret(secret));
@@ -35,7 +35,7 @@ export const verifyToken = async (
   }
 
   return {
-    sub: payload.sub as string,
+    id: payload.sub as string,
     email: payload.email as string,
     firstName: payload.firstName as string,
     lastName: (payload.lastName as string | null) ?? null,
@@ -43,7 +43,7 @@ export const verifyToken = async (
 };
 
 export interface PurposeTokenPayload {
-  sub: string;
+  id: string;
   email: string;
   pwdHashSlice: string;
 }
@@ -65,7 +65,7 @@ const generatePurposeToken = (
     purpose,
   })
     .setProtectedHeader({ alg: "HS256" })
-    .setSubject(payload.sub)
+    .setSubject(payload.id)
     .setIssuedAt()
     .setExpirationTime(expiresIn)
     .sign(encodeSecret(secret));
@@ -89,7 +89,7 @@ const verifyPurposeToken = async (
   }
 
   return {
-    sub: payload.sub,
+    id: payload.sub,
     email: payload.email,
     pwdHashSlice: payload.pwdHashSlice,
   };
