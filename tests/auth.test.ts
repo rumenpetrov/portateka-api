@@ -671,5 +671,132 @@ describe("Authentication Endpoints", () => {
       });
     });
   });
+
+  describe("POST /api/auth/change-password", () => {
+    it("should change password when currentPassword is valid and allow signing in with newPassword", async () => {
+      const { user, token, rawPassword } = await createTestUser();
+      const newPassword = "NewStrongPassword123!";
+
+      const response = await jsonRequest(
+        "/api/auth/change-password",
+        {
+          currentPassword: rawPassword,
+          newPassword,
+        },
+        {
+          Authorization: `Bearer ${token}`,
+        },
+      );
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body).toEqual({
+        data: {
+          message: "password_changed",
+        },
+      });
+
+      const oldSignIn = await jsonRequest("/api/auth/sign-in/email", {
+        email: user.email,
+        password: rawPassword,
+      });
+      expect(oldSignIn.status).toBe(401);
+
+      const newSignIn = await jsonRequest("/api/auth/sign-in/email", {
+        email: user.email,
+        password: newPassword,
+      });
+      expect(newSignIn.status).toBe(200);
+    });
+
+    it("should return 422 when currentPassword is incorrect", async () => {
+      const { token } = await createTestUser();
+
+      const response = await jsonRequest(
+        "/api/auth/change-password",
+        {
+          currentPassword: "WrongCurrentPassword123!",
+          newPassword: "NewStrongPassword123!",
+        },
+        {
+          Authorization: `Bearer ${token}`,
+        },
+      );
+      const body = await response.json();
+
+      expect(response.status).toBe(422);
+      expect(body).toEqual({
+        code: "VALIDATION_ERROR",
+        resource: "user",
+        params: {
+          currentPassword: "invalid_password",
+        },
+      });
+    });
+
+    it("should return 422 when newPassword is the same as currentPassword", async () => {
+      const { token, rawPassword } = await createTestUser();
+
+      const response = await jsonRequest(
+        "/api/auth/change-password",
+        {
+          currentPassword: rawPassword,
+          newPassword: rawPassword,
+        },
+        {
+          Authorization: `Bearer ${token}`,
+        },
+      );
+      const body = await response.json();
+
+      expect(response.status).toBe(422);
+      expect(body).toEqual({
+        code: "VALIDATION_ERROR",
+        resource: "user",
+        params: {
+          newPassword: "password_same_as_current",
+        },
+      });
+    });
+
+    it("should return 422 for a weak newPassword", async () => {
+      const { token, rawPassword } = await createTestUser();
+
+      const response = await jsonRequest(
+        "/api/auth/change-password",
+        {
+          currentPassword: rawPassword,
+          newPassword: "weak",
+        },
+        {
+          Authorization: `Bearer ${token}`,
+        },
+      );
+      const body = await response.json();
+
+      expect(response.status).toBe(422);
+      expect(body).toEqual({
+        code: "VALIDATION_ERROR",
+        resource: "user",
+        params: {
+          newPassword: "password_too_short",
+        },
+      });
+    });
+
+    it("should return 401 when Authorization header is missing", async () => {
+      const response = await jsonRequest("/api/auth/change-password", {
+        currentPassword: "TestPassword123!",
+        newPassword: "NewStrongPassword123!",
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(401);
+      expect(body).toEqual({
+        code: "UNAUTHORIZED",
+        resource: "user",
+      });
+    });
+  });
 });
 

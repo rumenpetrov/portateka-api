@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import {
+  changePassword,
   forgotPassword,
   me,
   resetPassword,
@@ -10,6 +11,7 @@ import {
 } from "@/controllers/authController";
 import { requireAuth } from "@/middleware/auth";
 import {
+  changePasswordSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
   signInEmailSchema,
@@ -46,6 +48,12 @@ app.post(
   "/reset-password",
   validateJson(resetPasswordSchema, "user"),
   resetPassword,
+);
+app.post(
+  "/change-password",
+  requireAuth,
+  validateJson(changePasswordSchema, "user"),
+  changePassword,
 );
 app.get("/me", requireAuth, me);
 app.patch("/me", requireAuth, validateJson(updateMeSchema, "user"), updateMe);
