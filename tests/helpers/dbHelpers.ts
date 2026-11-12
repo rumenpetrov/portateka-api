@@ -4,6 +4,8 @@ import { getDb } from "@/db/index.ts";
 import { properties, users } from "@/db/schema.ts";
 import { hashPassword } from "@/utils/password.ts";
 import { generateToken } from "@/utils/jwt.ts";
+import { DEFAULT_LOCALE } from "@/config.ts";
+import type { Locale } from "@/config.ts";
 
 export const testEnv: CloudflareBindings = {
   DATABASE_URL: process.env.TEST_DATABASE_URL!,
@@ -27,6 +29,7 @@ export async function createTestUser(
     lastName: string | null;
     password: string;
     emailVerified: boolean;
+    locale: Locale;
   }> = {},
 ) {
   const defaultData = {
@@ -35,6 +38,7 @@ export async function createTestUser(
     lastName: "User" as string | null,
     password: "TestPassword123!",
     emailVerified: true,
+    locale: DEFAULT_LOCALE as Locale,
     ...userData,
   };
 
@@ -48,6 +52,7 @@ export async function createTestUser(
       lastName: defaultData.lastName,
       password: hashedPassword,
       emailVerified: defaultData.emailVerified,
+      locale: defaultData.locale,
     })
     .returning();
 

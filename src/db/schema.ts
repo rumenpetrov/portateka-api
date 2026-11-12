@@ -8,6 +8,9 @@ import {
 } from "drizzle-orm/pg-core";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+// Relative import (not "@/") so drizzle-kit can resolve it without the TS path alias.
+import { DEFAULT_LOCALE } from "../config";
+import type { Locale } from "../config";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -17,6 +20,11 @@ export const users = pgTable("users", {
   // Stores the password hash, never the plain password.
   password: varchar("password", { length: 255 }).notNull(),
   emailVerified: boolean("email_verified").default(false).notNull(),
+  // Source of truth for server-generated content (emails). Validated against SUPPORTED_LOCALES in Zod, not a pgEnum, so adding a locale needs no migration.
+  locale: varchar("locale", { length: 10 })
+    .$type<Locale>()
+    .notNull()
+    .default(DEFAULT_LOCALE),
   preferredPropertyId: uuid("preferred_property_id").references(
     (): AnyPgColumn => properties.id,
     { onDelete: "set null" },

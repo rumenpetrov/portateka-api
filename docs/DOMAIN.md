@@ -22,10 +22,24 @@
 
 ### Profile Updates & Account Deletion (`PATCH /api/auth/me`, `DELETE /api/auth/me`)
 
-- Authenticated users can partially update their profile (`firstName`, `lastName`, `preferredPropertyId`) via `PATCH /api/auth/me`. `lastName` and `preferredPropertyId` can also be set to `null`.
+- Authenticated users can partially update their profile (`firstName`, `lastName`, `preferredPropertyId`, `locale`) via `PATCH /api/auth/me`. `lastName` and `preferredPropertyId` can also be set to `null`.
 - Authenticated users can permanently delete their account via `DELETE /api/auth/me`:
   - Deletes the row from `users` (which automatically deletes all of the user's `properties` via `ON DELETE CASCADE`) and returns `204 No Content`.
   - Sends a best-effort confirmation email (`sendAccountDeletedEmail`) notifying the user that their account and associated data have been deleted. If the email provider fails after the database deletion succeeds, the error is logged and the endpoint still returns `204 No Content`.
+
+### Preferred Language (`users.locale`) & Localized Emails
+
+- **Supported locales:** `SUPPORTED_LOCALES = ["en-US", "bg-BG"]` and `DEFAULT_LOCALE = "en-US"` in `src/config.ts` (BCP 47 tags, identical to the web app's `SupportedLocale`). Any other value is rejected with `422 VALIDATION_ERROR` (`params: { locale: "invalid_locale" }`).
+- **Storage:** Every user has a non-null `users.locale` (`varchar(10)`, `DEFAULT 'en-US'`). Users that existed before the column was introduced were backfilled with `en-US`.
+- **Source of truth (highest priority):** Once a user exists, the stored **`users.locale` is the single source of truth** for all server-generated content (verification, password reset, and account-deleted emails, and any future notifications). Request headers (`Accept-Language`) are **never** consulted for existing users — e.g. `POST /api/auth/forgot-password` always emails in the stored locale.
+- **Initial value at sign-up (`POST /api/auth/sign-up/email`)**, in priority order:
+  1. `locale` in the JSON body (the web app always sends it from a required, pre-filled language field).
+  2. Best match from the `Accept-Language` header (exact tag, then primary language, e.g. `bg` → `bg-BG`; q-values respected).
+  3. `DEFAULT_LOCALE` (`en-US`).
+  - Re-signing up with an existing **unverified** email overwrites the stored locale with the newly resolved value (same as name/password).
+- **Changing the preference:** Authenticated users update it via `PATCH /api/auth/me` with `{ locale }`. The new value applies to every email sent afterwards.
+- **Exposure:** `locale` is returned in the user object of `POST /api/auth/sign-in/email`, `POST /api/auth/verify-email`, `GET /api/auth/me`, and `PATCH /api/auth/me` so clients can align their UI language with the stored preference. It is **not** embedded in session JWTs (it would go stale after a change).
+- **Templates:** Each locale implements the `EmailTemplates` interface in `src/emails/<locale>.ts`; `EMAIL_TEMPLATES: Record<Locale, EmailTemplates>` makes a missing translation a compile-time error.
 
 ---
 

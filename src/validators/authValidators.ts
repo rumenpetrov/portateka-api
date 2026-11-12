@@ -1,5 +1,8 @@
 import { z } from "zod";
+import { SUPPORTED_LOCALES } from "@/config";
 export { validateJson } from "./validate";
+
+const localeFieldSchema = z.enum(SUPPORTED_LOCALES, { error: "invalid_locale" });
 
 const passwordFieldSchema = z
   .string({ error: "required" })
@@ -30,6 +33,8 @@ export const signUpEmailSchema = z.object({
     .max(50, "too_long")
     .optional(),
   password: passwordFieldSchema,
+  // Optional: falls back to Accept-Language, then DEFAULT_LOCALE.
+  locale: localeFieldSchema.optional(),
 });
 
 export const signInEmailSchema = z.object({
@@ -95,6 +100,7 @@ export const updateMeSchema = z.object({
     .pipe(z.uuid("invalid_uuid"))
     .nullable()
     .optional(),
+  locale: localeFieldSchema.optional(),
 });
 
 
