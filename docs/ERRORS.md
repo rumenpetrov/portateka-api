@@ -98,6 +98,17 @@ Defined in [`src/validators/authValidators.ts`](../src/validators/authValidators
 | `password`            | `password_missing_lowercase`  | `422 VALIDATION_ERROR` | Does not contain at least one lowercase letter `[a-z]` (`sign-up/email`, `reset-password`).                   |
 | `password`            | `password_missing_number`     | `422 VALIDATION_ERROR` | Does not contain at least one digit `\d` (`sign-up/email`, `reset-password`).                                 |
 | `password`            | `password_missing_special`    | `422 VALIDATION_ERROR` | Does not contain at least one special character `[^A-Za-z0-9]` (`sign-up/email`, `reset-password`).           |
+| `currentPassword`     | `required`                    | `422 VALIDATION_ERROR` | Missing or empty (`change-password`).                                                                         |
+| `currentPassword`     | `password_too_long`           | `422 VALIDATION_ERROR` | Exceeds `128` characters (`change-password`).                                                                 |
+| `currentPassword`     | `invalid_password`            | `422 VALIDATION_ERROR` | Does not match the user's current password hash (`change-password`).                                          |
+| `newPassword`         | `required`                    | `422 VALIDATION_ERROR` | Missing or empty (`change-password`).                                                                         |
+| `newPassword`         | `password_too_short`          | `422 VALIDATION_ERROR` | Fewer than `8` characters (`change-password`).                                                                |
+| `newPassword`         | `password_too_long`           | `422 VALIDATION_ERROR` | Exceeds `128` characters (`change-password`).                                                                 |
+| `newPassword`         | `password_missing_uppercase`  | `422 VALIDATION_ERROR` | Does not contain at least one uppercase letter `[A-Z]` (`change-password`).                                   |
+| `newPassword`         | `password_missing_lowercase`  | `422 VALIDATION_ERROR` | Does not contain at least one lowercase letter `[a-z]` (`change-password`).                                   |
+| `newPassword`         | `password_missing_number`     | `422 VALIDATION_ERROR` | Does not contain at least one digit `\d` (`change-password`).                                                 |
+| `newPassword`         | `password_missing_special`    | `422 VALIDATION_ERROR` | Does not contain at least one special character `[^A-Za-z0-9]` (`change-password`).                           |
+| `newPassword`         | `password_same_as_current`    | `422 VALIDATION_ERROR` | `newPassword` is identical to `currentPassword` (`change-password`).                                          |
 | `token`               | `required`                    | `422 VALIDATION_ERROR` | Missing, not a string, or empty after `.trim()` (`verify-email`, `reset-password`).                           |
 | `token`               | `invalid_or_expired_token`    | `422 VALIDATION_ERROR` | Token JWT signature is invalid, expired, already used, or wrong `purpose` (`verify-email`, `reset-password`). |
 | `preferredPropertyId` | `invalid_type`                | `422 VALIDATION_ERROR` | Provided and is neither a string nor `null` (`PATCH /api/auth/me`).                                           |

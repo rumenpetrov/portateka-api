@@ -63,6 +63,19 @@ export const resetPasswordSchema = z.object({
   password: passwordFieldSchema,
 });
 
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z
+      .string({ error: "required" })
+      .min(1, "required")
+      .max(128, "password_too_long"),
+    newPassword: passwordFieldSchema,
+  })
+  .refine((data) => data.newPassword !== data.currentPassword, {
+    message: "password_same_as_current",
+    path: ["newPassword"],
+  });
+
 export const updateMeSchema = z.object({
   firstName: z
     .string({ error: "invalid_type" })

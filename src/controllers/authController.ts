@@ -25,6 +25,7 @@ import {
 import { and, eq } from "drizzle-orm";
 import type { z } from "zod";
 import type {
+  changePasswordSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
   signUpEmailSchema,
@@ -65,6 +66,15 @@ type ResetPasswordContext = Context<
   AppEnv,
   string,
   { in: { json: unknown }; out: { json: z.output<typeof resetPasswordSchema> } }
+>;
+
+type ChangePasswordContext = Context<
+  AppEnv,
+  string,
+  {
+    in: { json: unknown };
+    out: { json: z.output<typeof changePasswordSchema> };
+  }
 >;
 
 type UpdateMeContext = Context<
@@ -347,6 +357,45 @@ export const resetPassword = async (c: ResetPasswordContext) => {
     .where(eq(users.id, user.id));
 
   return ok(c, { message: "password_reset_successful" });
+};
+
+export const changePassword = async (c: ChangePasswordContext) => {
+  const { sub } = c.get("user");
+  const { currentPassword, newPassword } = c.req.valid("json");
+  const db = getDb(c.env.DATABASE_URL);
+
+  const [user] = await db
+    .select({
+      id: users.id,
+      password: users.password,
+    })
+    .from(users)
+    .where(eq(users.id, sub))
+    .limit(1);
+
+  if (!user) {
+    throw new ApiError("UNAUTHORIZED", "user");
+  }
+
+  const isCurrentValid = await verifyPassword(currentPassword, user.password);
+
+  if (!isCurrentValid) {
+    throw new ValidationApiError("user", {
+      currentPassword: "invalid_password",
+    });
+  }
+
+  const hashedPassword = await hashPassword(newPassword);
+
+  await db
+    .update(users)
+    .set({
+      password: hashedPassword,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, user.id));
+
+  return ok(c, { message: "password_changed" });
 };
 
 export const me = async (c: AuthContext) => {
