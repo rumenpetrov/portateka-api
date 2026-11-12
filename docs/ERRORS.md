@@ -113,6 +113,7 @@ Defined in [`src/validators/authValidators.ts`](../src/validators/authValidators
 | `token`               | `invalid_or_expired_token`    | `422 VALIDATION_ERROR` | Token JWT signature is invalid, expired, already used, or wrong `purpose` (`verify-email`, `reset-password`). |
 | `preferredPropertyId` | `invalid_type`                | `422 VALIDATION_ERROR` | Provided and is neither a string nor `null` (`PATCH /api/auth/me`).                                           |
 | `preferredPropertyId` | `invalid_uuid`                | `422 VALIDATION_ERROR` | Provided as a string that is not a valid UUID (`PATCH /api/auth/me`).                                         |
+| `locale`              | `invalid_locale`              | `422 VALIDATION_ERROR` | Provided and is not one of `SUPPORTED_LOCALES` (`en-US`, `bg-BG`), including non-string values (`sign-up/email`, `PATCH /api/auth/me`). |
 
 ---
 

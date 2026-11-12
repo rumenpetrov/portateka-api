@@ -38,6 +38,7 @@ async function seed() {
           firstName: "Jane",
           password,
           emailVerified: true,
+          locale: "bg-BG",
         },
       ])
       .returning();

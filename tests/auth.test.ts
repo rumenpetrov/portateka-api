@@ -194,6 +194,7 @@ describe("Authentication Endpoints", () => {
           lastName: user.lastName,
           emailVerified: true,
           preferredPropertyId: null,
+          locale: "en-US",
           createdAt: expect.any(String),
           updatedAt: expect.any(String),
         },
@@ -273,6 +274,7 @@ describe("Authentication Endpoints", () => {
             lastName: user.lastName,
             emailVerified: true,
             preferredPropertyId: null,
+            locale: "en-US",
           },
         },
       });
@@ -387,6 +389,7 @@ describe("Authentication Endpoints", () => {
           lastName: user.lastName,
           emailVerified: true,
           preferredPropertyId: null,
+          locale: "en-US",
           createdAt: expect.any(String),
           updatedAt: expect.any(String),
         },

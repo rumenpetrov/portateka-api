@@ -1,15 +1,9 @@
 import { SYSTEM_CONFIG } from "@/config";
+import type { Locale } from "@/config";
+import { EMAIL_TEMPLATES } from "@/emails";
+import type { EmailContent } from "@/emails/types";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
-
-export interface SendVerificationEmailParams {
-  to: string;
-  firstName: string;
-  token: string;
-  webAppBaseUrl: string;
-  verifyEmailPrefix: string;
-  resendApiKey?: string;
-}
 
 const HTML_ESCAPE_MAP: Record<string, string> = {
   "&": "&amp;",
@@ -32,29 +26,25 @@ export const buildVerificationUrl = (
   return `${normalizedBase}${normalizedPrefix}?token=${encodeURIComponent(token)}`;
 };
 
-export const sendVerificationEmail = async ({
-  to,
-  firstName,
-  token,
-  webAppBaseUrl,
-  verifyEmailPrefix,
-  resendApiKey,
-}: SendVerificationEmailParams): Promise<void> => {
-  const verificationUrl = buildVerificationUrl(
-    webAppBaseUrl,
-    verifyEmailPrefix,
-    token,
-  );
+interface SendEmailParams {
+  to: string;
+  content: EmailContent;
+  resendApiKey?: string;
+  // Short summary logged instead of sending when RESEND_API_KEY is not set.
+  devSummary: string;
+}
 
+const sendEmail = async ({
+  to,
+  content,
+  resendApiKey,
+  devSummary,
+}: SendEmailParams): Promise<void> => {
   // Local dev and automated test fallback: skip network call when RESEND_API_KEY is not set
   if (!resendApiKey || resendApiKey.trim() === "") {
-    console.info(
-      `[email:dev] To: ${to} | Verify URL: ${verificationUrl}`,
-    );
+    console.info(`[email:dev] To: ${to} | ${devSummary}`);
     return;
   }
-
-  const safeFirstName = escapeHtml(firstName);
 
   const response = await fetch(RESEND_API_URL, {
     method: "POST",
@@ -65,27 +55,54 @@ export const sendVerificationEmail = async ({
     body: JSON.stringify({
       from: SYSTEM_CONFIG.emailFrom,
       to: [to],
-      subject: "Verify your Portateka email address",
-      html: `
-        <p>Hello ${safeFirstName},</p>
-        <p>Please verify your email address by clicking the link below:</p>
-        <p><a href="${verificationUrl}">${verificationUrl}</a></p>
-        <p>This link will expire in ${SYSTEM_CONFIG.emailVerificationExpiresIn}.</p>
-      `.trim(),
+      subject: content.subject,
+      html: content.html,
     }),
   });
 
   if (!response.ok) {
     const errorBody = await response.text().catch(() => "Unknown error");
-    throw new Error(
-      `Resend API error (${response.status}): ${errorBody}`,
-    );
+    throw new Error(`Resend API error (${response.status}): ${errorBody}`);
   }
+};
+
+export interface SendVerificationEmailParams {
+  to: string;
+  firstName: string;
+  locale: Locale;
+  token: string;
+  webAppBaseUrl: string;
+  verifyEmailPrefix: string;
+  resendApiKey?: string;
+}
+
+export const sendVerificationEmail = async ({
+  to,
+  firstName,
+  locale,
+  token,
+  webAppBaseUrl,
+  verifyEmailPrefix,
+  resendApiKey,
+}: SendVerificationEmailParams): Promise<void> => {
+  const url = buildVerificationUrl(webAppBaseUrl, verifyEmailPrefix, token);
+
+  await sendEmail({
+    to,
+    resendApiKey,
+    devSummary: `Locale: ${locale} | Verify URL: ${url}`,
+    content: EMAIL_TEMPLATES[locale].verification({
+      firstName: escapeHtml(firstName),
+      url: escapeHtml(url),
+      expiresInHours: SYSTEM_CONFIG.emailVerificationExpiresInHours,
+    }),
+  });
 };
 
 export interface SendPasswordResetEmailParams {
   to: string;
   firstName: string;
+  locale: Locale;
   token: string;
   webAppBaseUrl: string;
   resetPasswordPrefix: string;
@@ -95,93 +112,45 @@ export interface SendPasswordResetEmailParams {
 export const sendPasswordResetEmail = async ({
   to,
   firstName,
+  locale,
   token,
   webAppBaseUrl,
   resetPasswordPrefix,
   resendApiKey,
 }: SendPasswordResetEmailParams): Promise<void> => {
-  const resetUrl = buildVerificationUrl(
-    webAppBaseUrl,
-    resetPasswordPrefix,
-    token,
-  );
+  const url = buildVerificationUrl(webAppBaseUrl, resetPasswordPrefix, token);
 
-  // Local dev and automated test fallback: skip network call when RESEND_API_KEY is not set
-  if (!resendApiKey || resendApiKey.trim() === "") {
-    console.info(`[email:dev] To: ${to} | Reset Password URL: ${resetUrl}`);
-    return;
-  }
-
-  const safeFirstName = escapeHtml(firstName);
-
-  const response = await fetch(RESEND_API_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: SYSTEM_CONFIG.emailFrom,
-      to: [to],
-      subject: "Reset your Portateka password",
-      html: `
-        <p>Hello ${safeFirstName},</p>
-        <p>We received a request to reset your password. Click the link below to choose a new password:</p>
-        <p><a href="${resetUrl}">${resetUrl}</a></p>
-        <p>This link will expire in ${SYSTEM_CONFIG.passwordResetExpiresIn}. If you did not request a password reset, you can safely ignore this email.</p>
-      `.trim(),
+  await sendEmail({
+    to,
+    resendApiKey,
+    devSummary: `Locale: ${locale} | Reset Password URL: ${url}`,
+    content: EMAIL_TEMPLATES[locale].passwordReset({
+      firstName: escapeHtml(firstName),
+      url: escapeHtml(url),
+      expiresInHours: SYSTEM_CONFIG.passwordResetExpiresInHours,
     }),
   });
-
-  if (!response.ok) {
-    const errorBody = await response.text().catch(() => "Unknown error");
-    throw new Error(
-      `Resend API error (${response.status}): ${errorBody}`,
-    );
-  }
 };
 
 export interface SendAccountDeletedEmailParams {
   to: string;
   firstName: string;
+  locale: Locale;
   resendApiKey?: string;
 }
 
 export const sendAccountDeletedEmail = async ({
   to,
   firstName,
+  locale,
   resendApiKey,
 }: SendAccountDeletedEmailParams): Promise<void> => {
-  // Local dev and automated test fallback: skip network call when RESEND_API_KEY is not set
-  if (!resendApiKey || resendApiKey.trim() === "") {
-    console.info(`[email:dev] To: ${to} | Account Deleted`);
-    return;
-  }
-
-  const safeFirstName = escapeHtml(firstName);
-
-  const response = await fetch(RESEND_API_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: SYSTEM_CONFIG.emailFrom,
-      to: [to],
-      subject: "Your Portateka account has been deleted",
-      html: `
-        <p>Hello ${safeFirstName},</p>
-        <p>Your Portateka account and all associated property data have been permanently deleted as requested.</p>
-        <p>If you did not perform this action, please contact support immediately.</p>
-      `.trim(),
+  await sendEmail({
+    to,
+    resendApiKey,
+    devSummary: `Locale: ${locale} | Account Deleted`,
+    content: EMAIL_TEMPLATES[locale].accountDeleted({
+      firstName: escapeHtml(firstName),
     }),
   });
-
-  if (!response.ok) {
-    const errorBody = await response.text().catch(() => "Unknown error");
-    throw new Error(
-      `Resend API error (${response.status}): ${errorBody}`,
-    );
-  }
 };

@@ -23,6 +23,7 @@ import {
   sendPasswordResetEmail,
   sendVerificationEmail,
 } from "@/utils/email";
+import { resolveLocaleFromHeader } from "@/utils/locale";
 import { and, eq } from "drizzle-orm";
 import type { z } from "zod";
 import type {
@@ -91,8 +92,18 @@ const DECOY_HASH =
   "pbkdf2$sha256$100000$3qLFHGqxTSVbhRfdCjTUlA==$Oe07AH4z7xVtEX03/3RzLSsbhWRoCxYwRiTmp4q+eWo=";
 
 export const signUpEmail = async (c: SignUpEmailContext) => {
-  const { email, firstName, lastName, password } = c.req.valid("json");
+  const {
+    email,
+    firstName,
+    lastName,
+    password,
+    locale: bodyLocale,
+  } = c.req.valid("json");
   const db = getDb(c.env.DATABASE_URL);
+
+  // Priority: explicit body locale > Accept-Language > DEFAULT_LOCALE.
+  const locale =
+    bodyLocale ?? resolveLocaleFromHeader(c.req.header("Accept-Language"));
 
   // Always hash password first for consistent timing regardless of whether the email exists.
   const hashedPassword = await hashPassword(password);
@@ -123,6 +134,7 @@ export const signUpEmail = async (c: SignUpEmailContext) => {
         firstName,
         lastName: lastName ?? null,
         password: hashedPassword,
+        locale,
         updatedAt: new Date(),
       })
       .where(eq(users.id, existingUser.id));
@@ -136,6 +148,7 @@ export const signUpEmail = async (c: SignUpEmailContext) => {
         firstName,
         lastName,
         password: hashedPassword,
+        locale,
       })
       .returning({
         id: users.id,
@@ -158,6 +171,7 @@ export const signUpEmail = async (c: SignUpEmailContext) => {
     await sendVerificationEmail({
       to: email,
       firstName,
+      locale,
       token: verificationToken,
       webAppBaseUrl: c.env.WEB_APP_BASE_URL,
       verifyEmailPrefix: c.env.WEB_APP_VERIFY_EMAIL_PREFIX,
@@ -187,6 +201,7 @@ export const signInEmail = async (c: SignInEmailContext) => {
       password: users.password,
       emailVerified: users.emailVerified,
       preferredPropertyId: users.preferredPropertyId,
+      locale: users.locale,
     })
     .from(users)
     .where(eq(users.email, email))
@@ -223,6 +238,7 @@ export const signInEmail = async (c: SignInEmailContext) => {
       lastName: user.lastName,
       emailVerified: user.emailVerified,
       preferredPropertyId: user.preferredPropertyId,
+      locale: user.locale,
     },
   });
 };
@@ -269,6 +285,7 @@ export const verifyEmail = async (c: VerifyEmailContext) => {
       lastName: users.lastName,
       emailVerified: users.emailVerified,
       preferredPropertyId: users.preferredPropertyId,
+      locale: users.locale,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
     });
@@ -286,6 +303,7 @@ export const forgotPassword = async (c: ForgotPasswordContext) => {
       email: users.email,
       firstName: users.firstName,
       password: users.password,
+      locale: users.locale,
     })
     .from(users)
     .where(eq(users.email, email))
@@ -308,6 +326,8 @@ export const forgotPassword = async (c: ForgotPasswordContext) => {
     await sendPasswordResetEmail({
       to: user.email,
       firstName: user.firstName,
+      // Stored preference is the source of truth (request headers are ignored here).
+      locale: user.locale,
       token: resetToken,
       webAppBaseUrl: c.env.WEB_APP_BASE_URL,
       resetPasswordPrefix: c.env.WEB_APP_RESET_PASSWORD_PREFIX,
@@ -411,6 +431,7 @@ export const me = async (c: AuthContext) => {
       lastName: users.lastName,
       emailVerified: users.emailVerified,
       preferredPropertyId: users.preferredPropertyId,
+      locale: users.locale,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
     })
@@ -466,6 +487,7 @@ export const updateMe = async (c: UpdateMeContext) => {
       lastName: users.lastName,
       emailVerified: users.emailVerified,
       preferredPropertyId: users.preferredPropertyId,
+      locale: users.locale,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
     });
@@ -488,6 +510,7 @@ export const deleteMe = async (c: AuthContext) => {
       id: users.id,
       email: users.email,
       firstName: users.firstName,
+      locale: users.locale,
     });
 
   if (!deletedUser) {
@@ -498,6 +521,7 @@ export const deleteMe = async (c: AuthContext) => {
     await sendAccountDeletedEmail({
       to: deletedUser.email,
       firstName: deletedUser.firstName,
+      locale: deletedUser.locale,
       resendApiKey: c.env.RESEND_API_KEY,
     });
   } catch (err) {

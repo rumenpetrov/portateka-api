@@ -103,7 +103,7 @@ export const generateEmailVerificationToken = (
     payload,
     secret,
     "email_verification",
-    SYSTEM_CONFIG.emailVerificationExpiresIn,
+    `${SYSTEM_CONFIG.emailVerificationExpiresInHours}h`,
   );
 
 export const verifyEmailVerificationToken = (
@@ -120,7 +120,7 @@ export const generatePasswordResetToken = (
     payload,
     secret,
     "password_reset",
-    SYSTEM_CONFIG.passwordResetExpiresIn,
+    `${SYSTEM_CONFIG.passwordResetExpiresInHours}h`,
   );
 
 export const verifyPasswordResetToken = (
