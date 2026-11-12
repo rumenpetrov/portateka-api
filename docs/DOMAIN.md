@@ -20,9 +20,12 @@
 - **Single-use stateless reset token (`POST /api/auth/reset-password`):** The reset JWT embeds a 16-character slice of the user's current password hash (`pwdHashSlice`). When `POST /api/auth/reset-password` updates the user's password hash (and sets `emailVerified = true`), the embedded `pwdHashSlice` no longer matches the new password hash, automatically invalidating the token against reuse without requiring database token storage.
 - **Authenticated password change (`POST /api/auth/change-password`):** Authenticated users can change their password by providing `{ currentPassword, newPassword }`. `newPassword` must satisfy the standard password strength rules and differ from `currentPassword` (otherwise `422 VALIDATION_ERROR` with `params: { newPassword: "password_same_as_current" }`). If `currentPassword` does not match the stored hash, returns `422 VALIDATION_ERROR` with `params: { currentPassword: "invalid_password" }`. Updating the password hash also automatically invalidates any outstanding `password_reset` tokens via `pwdHashSlice`.
 
-### Profile Updates (`PATCH /api/auth/me`)
+### Profile Updates & Account Deletion (`PATCH /api/auth/me`, `DELETE /api/auth/me`)
 
 - Authenticated users can partially update their profile (`firstName`, `lastName`, `preferredPropertyId`) via `PATCH /api/auth/me`. `lastName` and `preferredPropertyId` can also be set to `null`.
+- Authenticated users can permanently delete their account via `DELETE /api/auth/me`:
+  - Deletes the row from `users` (which automatically deletes all of the user's `properties` via `ON DELETE CASCADE`) and returns `204 No Content`.
+  - Sends a best-effort confirmation email (`sendAccountDeletedEmail`) notifying the user that their account and associated data have been deleted. If the email provider fails after the database deletion succeeds, the error is logged and the endpoint still returns `204 No Content`.
 
 ---
 

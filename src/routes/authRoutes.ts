@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import {
   changePassword,
+  deleteMe,
   forgotPassword,
   me,
   resetPassword,
@@ -57,5 +58,6 @@ app.post(
 );
 app.get("/me", requireAuth, me);
 app.patch("/me", requireAuth, validateJson(updateMeSchema, "user"), updateMe);
+app.delete("/me", requireAuth, deleteMe);
 
 export default app;

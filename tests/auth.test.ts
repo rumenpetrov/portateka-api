@@ -7,7 +7,7 @@ import {
   testDb,
   testEnv,
 } from "./helpers/dbHelpers.ts";
-import { users } from "@/db/schema.ts";
+import { properties, users } from "@/db/schema.ts";
 import { eq } from "drizzle-orm";
 import {
   generateEmailVerificationToken,
@@ -789,6 +789,96 @@ describe("Authentication Endpoints", () => {
         currentPassword: "TestPassword123!",
         newPassword: "NewStrongPassword123!",
       });
+      const body = await response.json();
+
+      expect(response.status).toBe(401);
+      expect(body).toEqual({
+        code: "UNAUTHORIZED",
+        resource: "user",
+      });
+    });
+  });
+
+  describe("DELETE /api/auth/me", () => {
+    it("should delete the authenticated user, cascade delete their properties, send confirmation email, and return 204", async () => {
+      const { user, token } = await createTestUser();
+      await createTestProperty(user.id, { name: "Property 1" });
+      await createTestProperty(user.id, { name: "Property 2" });
+      const sendSpy = vi.spyOn(emailUtils, "sendAccountDeletedEmail");
+
+      const response = await app.request(
+        "/api/auth/me",
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+        testEnv,
+      );
+
+      expect(response.status).toBe(204);
+      expect(sendSpy).toHaveBeenCalledTimes(1);
+      expect(sendSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: user.email,
+          firstName: user.firstName,
+        }),
+      );
+
+      const remainingUsers = await testDb
+        .select()
+        .from(users)
+        .where(eq(users.id, user.id));
+      expect(remainingUsers).toHaveLength(0);
+
+      const remainingProperties = await testDb
+        .select()
+        .from(properties)
+        .where(eq(properties.userId, user.id));
+      expect(remainingProperties).toHaveLength(0);
+
+      // Subsequent /api/auth/me call with old token must return 401
+      const meResponse = await app.request(
+        "/api/auth/me",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+        testEnv,
+      );
+      expect(meResponse.status).toBe(401);
+    });
+
+    it("should still return 204 if sending the account deletion email fails", async () => {
+      const { token } = await createTestUser();
+      vi.spyOn(emailUtils, "sendAccountDeletedEmail").mockRejectedValueOnce(
+        new Error("Resend outage"),
+      );
+
+      const response = await app.request(
+        "/api/auth/me",
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+        testEnv,
+      );
+
+      expect(response.status).toBe(204);
+    });
+
+    it("should return 401 when Authorization header is missing", async () => {
+      const response = await app.request(
+        "/api/auth/me",
+        {
+          method: "DELETE",
+        },
+        testEnv,
+      );
       const body = await response.json();
 
       expect(response.status).toBe(401);
