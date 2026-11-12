@@ -140,3 +140,48 @@ export const sendPasswordResetEmail = async ({
     );
   }
 };
+
+export interface SendAccountDeletedEmailParams {
+  to: string;
+  firstName: string;
+  resendApiKey?: string;
+}
+
+export const sendAccountDeletedEmail = async ({
+  to,
+  firstName,
+  resendApiKey,
+}: SendAccountDeletedEmailParams): Promise<void> => {
+  // Local dev and automated test fallback: skip network call when RESEND_API_KEY is not set
+  if (!resendApiKey || resendApiKey.trim() === "") {
+    console.info(`[email:dev] To: ${to} | Account Deleted`);
+    return;
+  }
+
+  const safeFirstName = escapeHtml(firstName);
+
+  const response = await fetch(RESEND_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: SYSTEM_CONFIG.emailFrom,
+      to: [to],
+      subject: "Your Portateka account has been deleted",
+      html: `
+        <p>Hello ${safeFirstName},</p>
+        <p>Your Portateka account and all associated property data have been permanently deleted as requested.</p>
+        <p>If you did not perform this action, please contact support immediately.</p>
+      `.trim(),
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => "Unknown error");
+    throw new Error(
+      `Resend API error (${response.status}): ${errorBody}`,
+    );
+  }
+};

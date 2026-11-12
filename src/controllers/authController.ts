@@ -19,6 +19,7 @@ import {
 } from "@/utils/jwt";
 import type { PurposeTokenPayload } from "@/utils/jwt";
 import {
+  sendAccountDeletedEmail,
   sendPasswordResetEmail,
   sendVerificationEmail,
 } from "@/utils/email";
@@ -474,4 +475,34 @@ export const updateMe = async (c: UpdateMeContext) => {
   }
 
   return ok(c, updatedUser);
+};
+
+export const deleteMe = async (c: AuthContext) => {
+  const { sub } = c.get("user");
+  const db = getDb(c.env.DATABASE_URL);
+
+  const [deletedUser] = await db
+    .delete(users)
+    .where(eq(users.id, sub))
+    .returning({
+      id: users.id,
+      email: users.email,
+      firstName: users.firstName,
+    });
+
+  if (!deletedUser) {
+    throw new ApiError("UNAUTHORIZED", "user");
+  }
+
+  try {
+    await sendAccountDeletedEmail({
+      to: deletedUser.email,
+      firstName: deletedUser.firstName,
+      resendApiKey: c.env.RESEND_API_KEY,
+    });
+  } catch (err) {
+    console.error("Failed to send account deletion email:", err);
+  }
+
+  return c.body(null, 204);
 };
