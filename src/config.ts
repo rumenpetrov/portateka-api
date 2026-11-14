@@ -7,6 +7,8 @@ export const SYSTEM_CONFIG = {
   passwordResetExpiresInHours: 1,
   emailFrom: "Portateka <noreply@portateka-api.rpetrov.dev>",
   maxBodySizeBytes: 16 * 1024,
+  defaultPageSize: 20,
+  maxPageSize: 100,
 } as const;
 
 // BCP 47 tags shared with the web app (`portateka-web/src/i18n`).

@@ -14,6 +14,27 @@ export interface ErrorResponse {
   params?: Record<string, string>;
 }
 
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export const getPaginationOffset = (page: number, limit: number): number =>
+  (page - 1) * limit;
+
+export const buildPaginationMeta = (
+  page: number,
+  limit: number,
+  total: number,
+): PaginationMeta => ({
+  page,
+  limit,
+  total,
+  totalPages: Math.ceil(total / limit),
+});
+
 export type TransportContext =
   | Context
   | {

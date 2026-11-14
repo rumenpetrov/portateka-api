@@ -49,7 +49,7 @@
 
 - Every property belongs to a single user (`userId` references `users.id` with `ON DELETE CASCADE`).
 - A user can only list, view, create, update, or delete their own properties. Accessing or mutating another user's property returns `404 NOT_FOUND` (`resource: "property"`).
-- `GET /api/properties` returns the authenticated user's properties ordered by `createdAt` descending (newest first).
+- `GET /api/properties` supports offset pagination via `?page` (integer `>= 1`, default `1`) and `?limit` (integer `1`–`100`, default `20`), returns the authenticated user's properties ordered deterministically by `createdAt DESC, id DESC`, and includes `pagination: { page, limit, total, totalPages }` alongside `data`.
 
 ### Preferred Property Rules
 

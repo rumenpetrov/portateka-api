@@ -37,3 +37,15 @@ export const validateParams = <T extends z.ZodType>(
       throw new ValidationApiError(resource, formatIssues(result.error.issues));
     }
   });
+
+// Validates query parameters and throws a ValidationApiError whose params
+// map each invalid query param to its first error code.
+export const validateQuery = <T extends z.ZodType>(
+  schema: T,
+  resource: Resource,
+) =>
+  zValidator("query", schema, (result) => {
+    if (!result.success) {
+      throw new ValidationApiError(resource, formatIssues(result.error.issues));
+    }
+  });

@@ -152,12 +152,182 @@ describe("Properties Endpoints", () => {
       const response = await authRequest("/api/properties", token1);
       const body = (await response.json()) as {
         data: Array<{ name: string }>;
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
       };
 
       expect(response.status).toBe(200);
       expect(body.data).toHaveLength(2);
       expect(body.data[0]?.name).toBe("Second Property");
       expect(body.data[1]?.name).toBe("First Property");
+      expect(body.pagination).toEqual({
+        page: 1,
+        limit: 20,
+        total: 2,
+        totalPages: 1,
+      });
+    });
+
+    it("should paginate results when page and limit query params are provided", async () => {
+      const { user, token } = await createTestUser();
+
+      await createTestProperty(user.id, { name: "Property 1" });
+      await createTestProperty(user.id, { name: "Property 2" });
+      await createTestProperty(user.id, { name: "Property 3" });
+
+      const page1Res = await authRequest(
+        "/api/properties?page=1&limit=2",
+        token,
+      );
+      const page1Body = (await page1Res.json()) as {
+        data: Array<{ name: string }>;
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
+      };
+
+      expect(page1Res.status).toBe(200);
+      expect(page1Body.data.map((item) => item.name)).toEqual([
+        "Property 3",
+        "Property 2",
+      ]);
+      expect(page1Body.pagination).toEqual({
+        page: 1,
+        limit: 2,
+        total: 3,
+        totalPages: 2,
+      });
+
+      const page2Res = await authRequest(
+        "/api/properties?page=2&limit=2",
+        token,
+      );
+      const page2Body = (await page2Res.json()) as {
+        data: Array<{ name: string }>;
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
+      };
+
+      expect(page2Res.status).toBe(200);
+      expect(page2Body.data.map((item) => item.name)).toEqual(["Property 1"]);
+      expect(page2Body.pagination).toEqual({
+        page: 2,
+        limit: 2,
+        total: 3,
+        totalPages: 2,
+      });
+
+      const emptyPageRes = await authRequest(
+        "/api/properties?page=3&limit=2",
+        token,
+      );
+      const emptyPageBody = (await emptyPageRes.json()) as {
+        data: Array<{ name: string }>;
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
+      };
+
+      expect(emptyPageRes.status).toBe(200);
+      expect(emptyPageBody.data).toEqual([]);
+      expect(emptyPageBody.pagination).toEqual({
+        page: 3,
+        limit: 2,
+        total: 3,
+        totalPages: 2,
+      });
+    });
+
+    it("should return empty data and zero totals when user has no properties", async () => {
+      const { token } = await createTestUser();
+
+      const response = await authRequest("/api/properties", token);
+      const body = (await response.json()) as {
+        data: Array<{ name: string }>;
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
+      };
+
+      expect(response.status).toBe(200);
+      expect(body).toEqual({
+        data: [],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 0,
+          totalPages: 0,
+        },
+      });
+    });
+
+    it("should return 422 when pagination query params violate bounds or types", async () => {
+      const { token } = await createTestUser();
+
+      const boundsRes = await authRequest(
+        "/api/properties?page=0&limit=101",
+        token,
+      );
+      const boundsBody = await boundsRes.json();
+
+      expect(boundsRes.status).toBe(422);
+      expect(boundsBody).toEqual({
+        code: "VALIDATION_ERROR",
+        resource: "property",
+        params: {
+          page: "too_small",
+          limit: "too_big",
+        },
+      });
+
+      const typesRes = await authRequest(
+        "/api/properties?page=abc&limit=1.5",
+        token,
+      );
+      const typesBody = await typesRes.json();
+
+      expect(typesRes.status).toBe(422);
+      expect(typesBody).toEqual({
+        code: "VALIDATION_ERROR",
+        resource: "property",
+        params: {
+          page: "invalid_type",
+          limit: "invalid_type",
+        },
+      });
+
+      const emptyAndZeroLimitRes = await authRequest(
+        "/api/properties?page=&limit=0",
+        token,
+      );
+      const emptyAndZeroLimitBody = await emptyAndZeroLimitRes.json();
+
+      expect(emptyAndZeroLimitRes.status).toBe(422);
+      expect(emptyAndZeroLimitBody).toEqual({
+        code: "VALIDATION_ERROR",
+        resource: "property",
+        params: {
+          page: "invalid_type",
+          limit: "too_small",
+        },
+      });
     });
   });
 
