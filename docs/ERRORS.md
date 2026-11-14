@@ -70,6 +70,8 @@ When `code` is `VALIDATION_ERROR` (`422`), `ALREADY_EXISTS` (`409`), or `FORBIDD
 | `required`       | Field is missing, `null`, not a string, or empty after trimming.                        |
 | `invalid_type`   | Field value has the wrong JSON type (e.g., number/object instead of string or boolean). |
 | `too_long`       | String exceeds the maximum allowed character length for the field.                      |
+| `too_small`      | Numeric value is below the minimum allowed bound.                                       |
+| `too_big`        | Numeric value exceeds the maximum allowed bound.                                        |
 | `invalid_uuid`   | Route/field value is not a valid UUID.                                                  |
 | `already_exists` | Field value violates a uniqueness constraint.                                           |
 
@@ -121,9 +123,14 @@ Defined in [`src/validators/authValidators.ts`](../src/validators/authValidators
 
 Defined in [`src/validators/propertyValidators.ts`](../src/validators/propertyValidators.ts) and [`src/controllers/propertyController.ts`](../src/controllers/propertyController.ts):
 
-| Field (`params` key) | Machine Code (`params` value) |  HTTP Status / `code`  | Trigger Rule                                                                       |
-| :------------------- | :---------------------------- | :--------------------: | :--------------------------------------------------------------------------------- |
-| `id` _(route param)_ | `invalid_uuid`                | `422 VALIDATION_ERROR` | `:id` URL parameter is not a valid UUID (`GET /:id`, `PATCH /:id`, `DELETE /:id`). |
+| Field (`params` key)    | Machine Code (`params` value) |  HTTP Status / `code`  | Trigger Rule                                                                       |
+| :---------------------- | :---------------------------- | :--------------------: | :--------------------------------------------------------------------------------- |
+| `page` _(query param)_  | `invalid_type`                | `422 VALIDATION_ERROR` | `page` query parameter is not a valid integer (`GET /`).                           |
+| `page` _(query param)_  | `too_small`                   | `422 VALIDATION_ERROR` | `page` query parameter is less than `1` (`GET /`).                                 |
+| `limit` _(query param)_ | `invalid_type`                | `422 VALIDATION_ERROR` | `limit` query parameter is not a valid integer (`GET /`).                          |
+| `limit` _(query param)_ | `too_small`                   | `422 VALIDATION_ERROR` | `limit` query parameter is less than `1` (`GET /`).                                |
+| `limit` _(query param)_ | `too_big`                     | `422 VALIDATION_ERROR` | `limit` query parameter exceeds `100` (`GET /`).                                   |
+| `id` _(route param)_    | `invalid_uuid`                | `422 VALIDATION_ERROR` | `:id` URL parameter is not a valid UUID (`GET /:id`, `PATCH /:id`, `DELETE /:id`). |
 | `name`               | `required`                    | `422 VALIDATION_ERROR` | Missing on `POST`, not a string, or empty after `.trim()` (`POST`, `PATCH`).       |
 | `name`               | `too_long`                    | `422 VALIDATION_ERROR` | Exceeds `100` characters (`POST`, `PATCH`).                                        |
 | `description`        | `invalid_type`                | `422 VALIDATION_ERROR` | Provided and is neither a string nor `null` (`POST`, `PATCH`).                     |

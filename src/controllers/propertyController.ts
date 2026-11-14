@@ -2,9 +2,14 @@ import type { Context } from "hono";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import type { z } from "zod";
 import { NotFoundApiError } from "@/helpers/errors";
-import { ok } from "@/helpers/responses";
+import {
+  buildPaginationMeta,
+  getPaginationOffset,
+  ok,
+} from "@/helpers/responses";
 import { getDb } from "@/db";
 import { properties, users } from "@/db/schema";
+import type { paginationQuerySchema } from "@/validators/paginationValidators";
 import type {
   createPropertySchema,
   propertyIdParamSchema,
@@ -12,7 +17,14 @@ import type {
 } from "@/validators/propertyValidators";
 import type { AppEnv } from "@/types/env";
 
-type PropertyContext = Context<AppEnv>;
+type PropertyCollectionContext = Context<
+  AppEnv,
+  string,
+  {
+    in: { query: z.input<typeof paginationQuerySchema> };
+    out: { query: z.output<typeof paginationQuerySchema> };
+  }
+>;
 
 type PropertyParamContext = Context<
   AppEnv,
@@ -47,17 +59,26 @@ type UpdatePropertyContext = Context<
   }
 >;
 
-export const getPropertyCollection = async (c: PropertyContext) => {
+export const getPropertyCollection = async (c: PropertyCollectionContext) => {
   const { id: userId } = c.get("user");
+  const { page, limit } = c.req.valid("query");
   const db = getDb(c.env.DATABASE_URL);
+  const offset = getPaginationOffset(page, limit);
 
-  const userProperties = await db
-    .select()
-    .from(properties)
-    .where(eq(properties.userId, userId))
-    .orderBy(desc(properties.createdAt));
+  const [userProperties, total] = await Promise.all([
+    db
+      .select()
+      .from(properties)
+      .where(eq(properties.userId, userId))
+      .orderBy(desc(properties.createdAt), desc(properties.id))
+      .limit(limit)
+      .offset(offset),
+    db.$count(properties, eq(properties.userId, userId)),
+  ]);
 
-  return ok(c, userProperties);
+  return ok(c, userProperties, {
+    pagination: buildPaginationMeta(page, limit, total),
+  });
 };
 
 export const createPropertyEntry = async (c: CreatePropertyContext) => {

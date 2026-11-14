@@ -12,14 +12,23 @@ import {
   propertyIdParamSchema,
   updatePropertySchema,
 } from "@/validators/propertyValidators";
-import { validateJson, validateParams } from "@/validators/validate";
+import { paginationQuerySchema } from "@/validators/paginationValidators";
+import {
+  validateJson,
+  validateParams,
+  validateQuery,
+} from "@/validators/validate";
 import type { AppEnv } from "@/types/env";
 
 const app = new Hono<AppEnv>();
 
 app.use("*", requireAuth);
 
-app.get("/", getPropertyCollection);
+app.get(
+  "/",
+  validateQuery(paginationQuerySchema, "property"),
+  getPropertyCollection,
+);
 
 app.post("/", validateJson(createPropertySchema, "property"), createPropertyEntry);
 
