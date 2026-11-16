@@ -200,8 +200,6 @@ export const signInEmail = async (c: SignInEmailContext) => {
       lastName: users.lastName,
       password: users.password,
       emailVerified: users.emailVerified,
-      preferredPropertyId: users.preferredPropertyId,
-      locale: users.locale,
     })
     .from(users)
     .where(eq(users.email, email))
@@ -219,6 +217,25 @@ export const signInEmail = async (c: SignInEmailContext) => {
     throw new ApiError("FORBIDDEN", "user", { email: "email_not_verified" });
   }
 
+  const [updatedUser] = await db
+    .update(users)
+    .set({
+      lastLoginAt: new Date(),
+    })
+    .where(eq(users.id, user.id))
+    .returning({
+      id: users.id,
+      email: users.email,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      emailVerified: users.emailVerified,
+      preferredPropertyId: users.preferredPropertyId,
+      locale: users.locale,
+      lastLoginAt: users.lastLoginAt,
+      createdAt: users.createdAt,
+      updatedAt: users.updatedAt,
+    });
+
   const token = await generateToken(
     {
       id: user.id,
@@ -231,15 +248,7 @@ export const signInEmail = async (c: SignInEmailContext) => {
 
   return ok(c, {
     token,
-    user: {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      emailVerified: user.emailVerified,
-      preferredPropertyId: user.preferredPropertyId,
-      locale: user.locale,
-    },
+    user: updatedUser!,
   });
 };
 
@@ -286,6 +295,7 @@ export const verifyEmail = async (c: VerifyEmailContext) => {
       emailVerified: users.emailVerified,
       preferredPropertyId: users.preferredPropertyId,
       locale: users.locale,
+      lastLoginAt: users.lastLoginAt,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
     });
@@ -432,6 +442,7 @@ export const me = async (c: AuthContext) => {
       emailVerified: users.emailVerified,
       preferredPropertyId: users.preferredPropertyId,
       locale: users.locale,
+      lastLoginAt: users.lastLoginAt,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
     })
@@ -488,6 +499,7 @@ export const updateMe = async (c: UpdateMeContext) => {
       emailVerified: users.emailVerified,
       preferredPropertyId: users.preferredPropertyId,
       locale: users.locale,
+      lastLoginAt: users.lastLoginAt,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
     });

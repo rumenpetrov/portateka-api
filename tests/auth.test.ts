@@ -195,6 +195,7 @@ describe("Authentication Endpoints", () => {
           emailVerified: true,
           preferredPropertyId: null,
           locale: "en-US",
+          lastLoginAt: null,
           createdAt: expect.any(String),
           updatedAt: expect.any(String),
         },
@@ -261,7 +262,12 @@ describe("Authentication Endpoints", () => {
         email: user.email,
         password: rawPassword,
       });
-      const body = await response.json();
+      const body = (await response.json()) as {
+        data: {
+          token: string;
+          user: { lastLoginAt: string | null };
+        };
+      };
 
       expect(response.status).toBe(200);
       expect(body).toEqual({
@@ -275,9 +281,40 @@ describe("Authentication Endpoints", () => {
             emailVerified: true,
             preferredPropertyId: null,
             locale: "en-US",
+            lastLoginAt: expect.any(String),
+            createdAt: expect.any(String),
+            updatedAt: expect.any(String),
           },
         },
       });
+
+      const [dbUser] = await testDb
+        .select({
+          lastLoginAt: users.lastLoginAt,
+          updatedAt: users.updatedAt,
+        })
+        .from(users)
+        .where(eq(users.id, user.id));
+      expect(dbUser?.lastLoginAt).toBeInstanceOf(Date);
+      expect(dbUser?.lastLoginAt?.toISOString()).toBe(
+        body.data.user.lastLoginAt,
+      );
+      expect(dbUser?.updatedAt.toISOString()).toBe(user.updatedAt.toISOString());
+
+      const meResponse = await app.request(
+        "/api/auth/me",
+        {
+          headers: {
+            Authorization: `Bearer ${body.data.token}`,
+          },
+        },
+        testEnv,
+      );
+      const meBody = (await meResponse.json()) as {
+        data: { lastLoginAt: string | null };
+      };
+      expect(meResponse.status).toBe(200);
+      expect(meBody.data.lastLoginAt).toBe(body.data.user.lastLoginAt);
     });
 
     it("should return 403 when email is not verified", async () => {
@@ -390,6 +427,7 @@ describe("Authentication Endpoints", () => {
           emailVerified: true,
           preferredPropertyId: null,
           locale: "en-US",
+          lastLoginAt: null,
           createdAt: expect.any(String),
           updatedAt: expect.any(String),
         },

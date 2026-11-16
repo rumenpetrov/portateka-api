@@ -29,6 +29,7 @@ export const users = pgTable("users", {
     (): AnyPgColumn => properties.id,
     { onDelete: "set null" },
   ),
+  lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
