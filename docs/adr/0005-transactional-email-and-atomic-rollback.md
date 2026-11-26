@@ -10,7 +10,7 @@ Account registration and password reset require sending transactional emails con
 1. **Direct Resend REST API via `fetch` (`src/utils/email.ts`):**
    Send emails via standard `fetch("https://api.resend.com/emails", ...)` with HTML-escaped user interpolations (`escapeHtml(firstName)`) instead of pulling in a third-party SDK.
 2. **Zero-Quota Local & Test Fallback:**
-   When `RESEND_API_KEY` is empty or omitted (in local `.env` or `testEnv`), skip the external HTTP call and log `[email:dev] To: ... | URL: ...` to the console.
+   When `RESEND_API_KEY` is empty or omitted (in local `.env` or `testEnv`), skip the external HTTP call and log the recipient and action URL to the console.
 3. **Compensating Rollback on Sign-Up Email Failure (`src/controllers/authController.ts`):**
    If sending the verification email fails during `POST /api/auth/sign-up/email`:
    - For a newly inserted user (`isNewUser === true`), immediately delete the newly created row from `users` before throwing `InternalServerApiError("user")`.

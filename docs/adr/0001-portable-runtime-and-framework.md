@@ -12,7 +12,7 @@ We want to deploy `portateka-api` to **Cloudflare Workers** for fast global edge
 2. **Runtime Portability (`nodejs_compat`):**
    Restrict all application code to standard Web APIs (`fetch`, `Request`, `Response`, `crypto.subtle`) and Node.js built-ins (`node:crypto`). Avoid Cloudflare-specific storage or proprietary runtime APIs in domain logic.
 3. **Per-Request Environment Bindings:**
-   Read secrets and configuration (`c.env.DATABASE_URL`, `c.env.JWT_SECRET`, `c.env.RESEND_API_KEY`) strictly inside request handlers or middleware rather than at module top-level, satisfying Workers' stateless isolate model.
+   Read secrets and configuration from `c.env` strictly inside request handlers or middleware rather than at module top-level, satisfying Workers' stateless isolate model.
 4. **Path Aliases (`@/*` $\rightarrow$ `./src/*`):**
    Configure `"@/*": ["./src/*"]` in `tsconfig.json` and `vitest.config.ts` for all cross-directory imports in `src/` and `tests/`, while preserving relative `.ts` imports in standalone Node CLI scripts (`src/db/reset.ts`, `src/db/seed.ts`) that run directly via `node` without a bundler.
 

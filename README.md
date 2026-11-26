@@ -92,7 +92,7 @@ npm run db:reset
 # 3. Replay all migrations (0000 -> latest) on your clean local dev DB
 npm run db:migrate
 
-# 4. Populate local demo data (john@example.com, jane@example.com)
+# 4. Populate local demo data (defined in src/db/seed.ts)
 npm run db:seed
 ```
 
@@ -136,7 +136,7 @@ Production deployments run automatically on push to `main` via [`.github/workflo
 
 1. Runs `npm run typecheck`, `npm test`, and `npm run build`.
 2. Runs `npm run db:migrate` against the production `DATABASE_URL`.
-3. Deploys the prebuilt Worker bundle (`dist/index.js --no-bundle`) and syncs production secrets (`DATABASE_URL`, `JWT_SECRET`, `RESEND_API_KEY`) from **GitHub Actions Secrets** directly to **Cloudflare Workers**.
+3. Deploys the prebuilt Worker bundle and syncs the production secrets listed in [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) from **GitHub Actions Secrets** directly to **Cloudflare Workers**.
 
 **GitHub Secrets is the single source of truth for production secrets.** When adding a new secret to the app:
 
