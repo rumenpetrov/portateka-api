@@ -85,6 +85,69 @@ describe("EMAIL_TEMPLATES", () => {
   });
 });
 
+describe("buildVerificationUrl and localized email URLs", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("builds locale-prefixed verification and password-reset URLs", () => {
+    expect(
+      emailUtils.buildVerificationUrl(
+        "https://portateka.rpetrov.dev",
+        "bg-BG",
+        "/verify-email",
+        "abc 123+/",
+      ),
+    ).toBe(
+      "https://portateka.rpetrov.dev/bg-BG/verify-email?token=abc%20123%2B%2F",
+    );
+
+    expect(
+      emailUtils.buildVerificationUrl(
+        "https://portateka.rpetrov.dev///",
+        "en-US",
+        "reset-password",
+        "tok",
+      ),
+    ).toBe("https://portateka.rpetrov.dev/en-US/reset-password?token=tok");
+  });
+
+  it("includes the locale prefix in dev email summaries", async () => {
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+
+    await emailUtils.sendVerificationEmail({
+      to: "user@example.com",
+      firstName: "Ivan",
+      locale: "bg-BG",
+      token: "verify-tok",
+      webAppBaseUrl: "https://portateka.rpetrov.dev",
+      verifyEmailPrefix: "/verify-email",
+    });
+
+    await emailUtils.sendPasswordResetEmail({
+      to: "user@example.com",
+      firstName: "Ivan",
+      locale: "en-US",
+      token: "reset-tok",
+      webAppBaseUrl: "https://portateka.rpetrov.dev",
+      resetPasswordPrefix: "/reset-password",
+    });
+
+    expect(infoSpy).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining(
+        "https://portateka.rpetrov.dev/bg-BG/verify-email?token=verify-tok",
+      ),
+    );
+    expect(infoSpy).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining(
+        "https://portateka.rpetrov.dev/en-US/reset-password?token=reset-tok",
+      ),
+    );
+  });
+});
+
 describe("User locale", () => {
   afterEach(async () => {
     vi.restoreAllMocks();

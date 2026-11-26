@@ -18,12 +18,13 @@ export const escapeHtml = (value: string): string =>
 
 export const buildVerificationUrl = (
   baseUrl: string,
+  locale: Locale,
   prefix: string,
   token: string,
 ): string => {
   const normalizedBase = baseUrl.replace(/\/+$/, "");
   const normalizedPrefix = prefix.startsWith("/") ? prefix : `/${prefix}`;
-  return `${normalizedBase}${normalizedPrefix}?token=${encodeURIComponent(token)}`;
+  return `${normalizedBase}/${locale}${normalizedPrefix}?token=${encodeURIComponent(token)}`;
 };
 
 interface SendEmailParams {
@@ -85,7 +86,12 @@ export const sendVerificationEmail = async ({
   verifyEmailPrefix,
   resendApiKey,
 }: SendVerificationEmailParams): Promise<void> => {
-  const url = buildVerificationUrl(webAppBaseUrl, verifyEmailPrefix, token);
+  const url = buildVerificationUrl(
+    webAppBaseUrl,
+    locale,
+    verifyEmailPrefix,
+    token,
+  );
 
   await sendEmail({
     to,
@@ -118,7 +124,12 @@ export const sendPasswordResetEmail = async ({
   resetPasswordPrefix,
   resendApiKey,
 }: SendPasswordResetEmailParams): Promise<void> => {
-  const url = buildVerificationUrl(webAppBaseUrl, resetPasswordPrefix, token);
+  const url = buildVerificationUrl(
+    webAppBaseUrl,
+    locale,
+    resetPasswordPrefix,
+    token,
+  );
 
   await sendEmail({
     to,
