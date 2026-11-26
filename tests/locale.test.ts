@@ -95,21 +95,21 @@ describe("buildVerificationUrl and localized email URLs", () => {
       emailUtils.buildVerificationUrl(
         "https://portateka.rpetrov.dev",
         "bg-BG",
-        "/verify-email",
+        "/app/verify-email",
         "abc 123+/",
       ),
     ).toBe(
-      "https://portateka.rpetrov.dev/bg-BG/verify-email?token=abc%20123%2B%2F",
+      "https://portateka.rpetrov.dev/bg-BG/app/verify-email?token=abc%20123%2B%2F",
     );
 
     expect(
       emailUtils.buildVerificationUrl(
         "https://portateka.rpetrov.dev///",
         "en-US",
-        "reset-password",
+        "app/reset-password",
         "tok",
       ),
-    ).toBe("https://portateka.rpetrov.dev/en-US/reset-password?token=tok");
+    ).toBe("https://portateka.rpetrov.dev/en-US/app/reset-password?token=tok");
   });
 
   it("includes the locale prefix in dev email summaries", async () => {
@@ -121,7 +121,7 @@ describe("buildVerificationUrl and localized email URLs", () => {
       locale: "bg-BG",
       token: "verify-tok",
       webAppBaseUrl: "https://portateka.rpetrov.dev",
-      verifyEmailPrefix: "/verify-email",
+      verifyEmailPrefix: "/app/verify-email",
     });
 
     await emailUtils.sendPasswordResetEmail({
@@ -130,19 +130,19 @@ describe("buildVerificationUrl and localized email URLs", () => {
       locale: "en-US",
       token: "reset-tok",
       webAppBaseUrl: "https://portateka.rpetrov.dev",
-      resetPasswordPrefix: "/reset-password",
+      resetPasswordPrefix: "/app/reset-password",
     });
 
     expect(infoSpy).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining(
-        "https://portateka.rpetrov.dev/bg-BG/verify-email?token=verify-tok",
+        "https://portateka.rpetrov.dev/bg-BG/app/verify-email?token=verify-tok",
       ),
     );
     expect(infoSpy).toHaveBeenNthCalledWith(
       2,
       expect.stringContaining(
-        "https://portateka.rpetrov.dev/en-US/reset-password?token=reset-tok",
+        "https://portateka.rpetrov.dev/en-US/app/reset-password?token=reset-tok",
       ),
     );
   });
